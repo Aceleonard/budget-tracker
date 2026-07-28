@@ -301,14 +301,25 @@ const DEFAULT_MONTHS = {
   ])},
 };
 
+function normalizeConfigAndMonths() {
+  if (!config.goals) config.goals = [];
+  if (config.savingsLocation === undefined) config.savingsLocation = '';
+  if (!config.currency) config.currency = 'AED';
+  if (config.income > 0) {
+    Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
+  }
+  config.debts.forEach(d => {
+    if (d.monthlyPayment > 0) {
+      Object.keys(months).forEach(k => {
+        months[k].entries.forEach(e => { if (e.linkedDebtId === d.id && !e.amount) e.amount = d.monthlyPayment; });
+      });
+    }
+  });
+}
+
 let config = load('aceBudgetConfig', DEFAULT_CONFIG);
 let months = load('aceBudgetMonths', DEFAULT_MONTHS);
-if (!config.goals) config.goals = [];
-if (config.savingsLocation === undefined) config.savingsLocation = '';
-if (!config.currency) config.currency = 'AED';
-if (config.income > 0) {
-  Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
-}
+normalizeConfigAndMonths();
 let activeTab = 'dashboard';
 let activeMonthKey = Object.keys(months).sort().slice(-1)[0];
 let chartInstance = null;
@@ -391,12 +402,7 @@ async function pushToCloud() {
 function applyCloudRow(row) {
   if (row.config && Object.keys(row.config).length) config = row.config;
   if (row.months && Object.keys(row.months).length) months = row.months;
-  if (!config.goals) config.goals = [];
-  if (config.savingsLocation === undefined) config.savingsLocation = '';
-  if (!config.currency) config.currency = 'AED';
-  if (config.income > 0) {
-    Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
-  }
+  normalizeConfigAndMonths();
   activeMonthKey = Object.keys(months).sort().slice(-1)[0];
   lastSyncedUpdatedAt = row.updated_at;
   persist();
@@ -1352,6 +1358,11 @@ function updateDebt(id, field, value) {
   const d = config.debts.find(d => d.id === id);
   if (!d) return;
   d[field] = (field==='name'||field==='type') ? value : Number(value);
+  if (field === 'monthlyPayment') {
+    Object.keys(months).forEach(k => {
+      months[k].entries.forEach(e => { if (e.linkedDebtId === id && !e.amount) e.amount = d.monthlyPayment; });
+    });
+  }
   markDirty(); renderContent(false);
 }
 function removeDebt(id) { config.debts = config.debts.filter(d => d.id !== id); markDirty(); renderContent(false); }
