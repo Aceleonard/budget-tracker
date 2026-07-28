@@ -1,0 +1,1561 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ace's Route to Debt-Free</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root[data-theme="dark"] {
+    --bg: #141B2E;
+    --bg-soft: #1B2540;
+    --panel: #202B4A;
+    --panel-line: #32406B;
+    --gold: #C9A24B;
+    --gold-soft: #E8C878;
+    --teal: #3E9C87;
+    --rust: #D9694A;
+    --text: #F2EEE3;
+    --text-dim: #B9C0D6;
+    --road: #0E1524;
+    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF6EE;
+    --bg-soft: #F0E9D8;
+    --panel: #FFFFFF;
+    --panel-line: #E4DAC4;
+    --gold: #B8863E;
+    --gold-soft: #D9A94F;
+    --teal: #2E7D6B;
+    --rust: #C1502E;
+    --text: #2B2417;
+    --text-dim: #7A7260;
+    --road: #2B2417;
+    --shadow: 0 8px 20px rgba(43,36,23,0.10);
+  }
+
+  :root[data-theme="dark"] { color-scheme: dark; }
+  :root[data-theme="light"] { color-scheme: light; }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif; transition: background 0.3s ease, color 0.3s ease;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  .topbar { display:flex; justify-content: space-between; align-items:center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+  .brand { font-family:'Fraunces', serif; font-weight: 700; font-size: 22px; }
+  .brand span { color: var(--gold); }
+
+  .theme-toggle {
+    display:flex; align-items:center; gap:6px; background: var(--panel); border: 1px solid var(--panel-line);
+    padding: 6px 12px; border-radius: 999px; cursor:pointer; font-size:14px; font-weight:600; color: var(--text);
+    box-shadow: var(--shadow); transition: transform 0.15s ease;
+  }
+  .theme-toggle:hover { transform: scale(1.03); }
+
+  .tabs { display:flex; gap:8px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tab-btn {
+    padding: 9px 16px; border-radius: 12px; border: 1px solid var(--panel-line); background: transparent;
+    color: var(--text-dim); font-family:'Inter'; font-weight:600; font-size: 14px; cursor:pointer;
+    display:flex; align-items:center; gap:6px; transition: all 0.15s ease;
+  }
+  .tab-btn:hover { border-color: var(--gold); color: var(--text); }
+  .tab-btn.active { background: var(--gold); color: var(--road); border-color: var(--gold); }
+
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes dashFlow { from { background-position: 0 0; } to { background-position: -34px 0; } }
+  @keyframes popIn { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+  @keyframes confettiFall {
+    0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(240px) rotate(360deg); opacity: 0; }
+  }
+
+  #content { animation: fadeIn 0.25s ease; }
+  #content.quiet .card, #content.quiet .stop-dot { animation: none !important; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 18px;
+    padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px;
+    animation: fadeInUp 0.45s ease both;
+  }
+  .btn:active, .tab-btn:active, .icon-btn:active { transform: scale(0.94); }
+  .grid { display:grid; gap: 14px; }
+  .grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 720px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
+
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--text-dim); margin-bottom: 4px; font-weight: 600;}
+  .value { font-family:'Fraunces', serif; font-weight: 600; font-size: 24px; }
+  .value.small { font-size: 18px; }
+
+  input[type=text], input[type=number], input[type=password], select {
+    width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--panel-line);
+    background: var(--bg-soft); color: var(--text); font-family:'Inter'; font-size: 14px; outline: none;
+    transition: border-color 0.15s ease;
+  }
+  input:focus, select:focus { border-color: var(--gold); }
+
+  textarea.wrap-input {
+    width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--panel-line);
+    background: var(--bg-soft); color: var(--text); font-family:'Inter'; font-size: 14px; outline: none;
+    resize: none; overflow: hidden; white-space: pre-wrap; word-break: break-word; line-height: 1.4;
+    min-height: 38px; display: block; transition: border-color 0.15s ease;
+  }
+  textarea.wrap-input:focus { border-color: var(--gold); }
+
+  .btn {
+    padding: 9px 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700;
+    font-family:'Inter'; font-size: 14px; transition: transform 0.15s ease;
+  }
+  .btn:hover { transform: scale(1.03); }
+  .btn-primary { background: var(--gold); color: var(--road); }
+  .btn-danger { background: var(--rust); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--gold); border: 1px dashed var(--gold); }
+  .icon-btn { background: transparent; border:none; cursor:pointer; font-size: 16px; padding: 4px 8px; border-radius: 8px; }
+  .icon-btn:hover { background: var(--bg-soft); }
+  @media (max-width: 600px) {
+    .icon-btn { padding: 8px 10px; font-size: 17px; }
+    .tab-btn { padding: 10px 14px; font-size: 13px; }
+  }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { text-align:left; font-size: 11px; text-transform:uppercase; color: var(--text-dim); padding: 4px 6px; font-weight:700; }
+  td { padding: 5px 6px; vertical-align: middle; }
+  td.amt { font-family:'JetBrains Mono'; }
+  .paid-pill { display:inline-block; padding: 3px 10px; border-radius: 999px; font-size:12px; font-weight:700; }
+  .paid-pill.paid { background: rgba(62,156,135,0.18); color: var(--teal); }
+  .paid-pill.pending { background: rgba(217,105,74,0.15); color: var(--rust); }
+
+  .entry-item { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--panel-line); }
+  .entry-item:last-child { border-bottom:none; }
+  .entry-main { flex:1 1 280px; min-width:220px; }
+  .entry-cat { font-weight:600; margin-bottom:6px; }
+  .entry-remarks { font-size:13px; color: var(--text-dim); background: transparent; border-style: dashed; }
+  .entry-meta { display:flex; gap:10px; flex-wrap:wrap; flex:0 0 auto; }
+  .amt { font-family:'JetBrains Mono'; }
+  @media (max-width: 600px) { .entry-meta { width:100%; } .entry-meta > div { flex:1 1 100px; } }
+
+  .route { border-radius: 20px; padding: 24px; margin-bottom: 20px; background: linear-gradient(180deg, var(--road) 0%, #0A0F1C 100%); box-shadow: var(--shadow); position: relative; overflow:hidden;}
+  :root[data-theme="light"] .route { background: linear-gradient(180deg, #3A3222 0%, #2B2417 100%); }
+  .route-title { font-family:'Fraunces', serif; font-weight: 700; font-size: 24px; color: #F2EEE3; margin: 0; }
+  .route-sub { font-family:'JetBrains Mono'; font-size: 12px; color: #B9C0D6; }
+  .route-track { display:flex; justify-content: space-between; position: relative; margin-top: 26px; flex-wrap: wrap; gap: 16px 0; }
+  .route-line { position:absolute; top: 17px; left: 0; right: 0; height: 2px;
+    background-image: repeating-linear-gradient(90deg, #E8C878 0 12px, transparent 12px 22px);
+    background-size: 34px 2px; opacity: 0.55; animation: dashFlow 1.2s linear infinite; }
+  .stop { display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; min-width:0; position:relative; z-index:1; }
+  @media (max-width: 520px) {
+    .route { padding: 18px; }
+    .route-line { display: none; }
+    .stop { flex:1 1 42%; min-width:120px; }
+  }
+  .stop-dot { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size: 16px; margin-bottom: 6px; box-shadow: 0 0 0 4px var(--road); animation: popIn 0.5s ease both; }
+  :root[data-theme="light"] .stop-dot { box-shadow: 0 0 0 4px #2B2417; }
+  .stop-label { color:#F2EEE3; font-size: 13px; font-weight: 700; }
+  .stop-sub { color:#B9C0D6; font-size: 11px; font-family:'JetBrains Mono'; margin-top:2px; }
+
+  .month-select-row { display:flex; justify-content: space-between; align-items:center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .progress-bar { width:100%; height: 10px; border-radius: 999px; background: var(--bg-soft); overflow:hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: var(--gold); width: 0; transition: width 1s cubic-bezier(.22,1,.36,1); }
+
+  .note { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+  .add-link { color: var(--gold); font-weight:700; font-size: 13px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; margin-top:8px; background:none; border:none; }
+  .chart-wrap { height: 300px; margin-top: 10px; }
+  .save-flag { font-size: 12px; color: var(--rust); }
+
+  .toast {
+    position: fixed; bottom: 22px; right: 22px; background: var(--teal); color: #fff;
+    padding: 10px 20px; border-radius: 999px; font-family:'Inter'; font-weight:700; font-size: 14px;
+    box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease; z-index: 9998;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--rust); }
+
+  .save-btn {
+    display:inline-flex; align-items:center; gap:6px; background: var(--teal); color:#fff;
+    padding: 8px 16px; border-radius: 12px; border:none; cursor:pointer; font-weight:700;
+    font-family:'Inter'; font-size: 13px; transition: transform 0.15s ease;
+  }
+  .save-btn:hover { transform: scale(1.03); }
+  .save-btn:active { transform: scale(0.96); }
+
+  .flow-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-family:'JetBrains Mono'; font-size:14px; }
+  .flow-row.total { border-top:1px solid var(--panel-line); margin-top:4px; padding-top:10px; font-weight:700; font-size:16px; }
+  .flow-label { color: var(--text-dim); font-family:'Inter'; font-size:13px; }
+  .flow-row.total .flow-label { color: var(--text); font-weight:600; }
+
+  .date-picker-popup {
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 14px;
+    padding: 12px; box-shadow: var(--shadow); width: 230px; font-family: 'Inter';
+  }
+  .dp-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:var(--text); font-weight:700; font-size:13px; }
+  .dp-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; text-align:center; }
+  .dp-dow { font-size:11px; color:var(--text-dim); margin-bottom:4px; }
+  .dp-day { background:transparent; border:none; color:var(--text); padding:6px 0; border-radius:8px; cursor:pointer; font-family:'Inter'; font-size:13px; }
+  .dp-day:hover { background: var(--bg-soft); }
+  .dp-selected { background: var(--gold) !important; color: var(--road) !important; font-weight:700; }
+  .dp-today { box-shadow: inset 0 0 0 1px var(--gold); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">Ace's <span>Route to Debt-Free</span></div>
+    <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+      <div id="liveClock" style="font-family:'JetBrains Mono'; font-size:12px; color:var(--text-dim);"></div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Dark mode</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="content"></div>
+</div>
+<div id="toast" class="toast">✅ Saved</div>
+
+<script>
+// ---------------- state ----------------
+const uid = () => Math.random().toString(36).slice(2, 10);
+const AED = (n) => `${config.currency || 'AED'} ${Math.round(Number(n)||0).toLocaleString('en-US')}`;
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+const DEFAULT_CONFIG = {
+  income: 0,
+  currency: 'AED',
+  fixedCosts: [
+    { id: 'rent', name: 'Rent DXB', amount: 0 },
+    { id: 'parents', name: 'Parents (Papa + Mama)', amount: 0 },
+    { id: 'insurance', name: 'Insurance', amount: 0 },
+    { id: 'transport', name: 'Transportation', amount: 0 },
+    { id: 'grocery', name: 'Grocery (Share)', amount: 0 },
+  ],
+  debts: [
+    { id: 'smaug', name: 'Smaug BYD - Car Loan', type: 'Auto Loan', monthlyPayment: 0, termMonths: 0, paymentsMade: 0, paidMonths: [] },
+    { id: 'dudu', name: 'Dudu Gold Plan (ENBD)', type: 'Gold Savings', monthlyPayment: 0, termMonths: 0, paymentsMade: 0, paidMonths: [] },
+  ],
+  emergencyFundGoal: 0,
+  monthlyTarget: 0,
+  savingsLocation: '',
+  goals: [],
+};
+
+function seedEntries(rows) {
+  return rows.map(([category, amount, status, remarks, linkedDebtId]) => ({
+    id: uid(), category, amount, status: status || '', remarks: remarks || '',
+    linkedDebtId: linkedDebtId || null, expenses: [],
+  }));
+}
+
+const DEFAULT_MONTHS = {
+  '2026-07': { label: 'July 2026', income: 0, entries: seedEntries([
+    ['Rent DXB', 0, ''],
+    ['Parents (Papa + Mama)', 0, ''],
+    ['Insurance', 0, ''],
+    ['Transportation', 0, ''],
+    ['Grocery (Share)', 0, ''],
+    ['Smaug BYD - Car Loan', 0, '', '', 'smaug'],
+    ['Dudu Gold Plan (ENBD)', 0, '', '', 'dudu'],
+    ['Savings', 0, ''],
+    ['Extras', 0, ''],
+  ])},
+};
+
+let config = load('aceBudgetConfig', DEFAULT_CONFIG);
+let months = load('aceBudgetMonths', DEFAULT_MONTHS);
+if (!config.goals) config.goals = [];
+if (config.savingsLocation === undefined) config.savingsLocation = '';
+if (!config.currency) config.currency = 'AED';
+let activeTab = 'dashboard';
+let activeMonthKey = Object.keys(months).sort().slice(-1)[0];
+let chartInstance = null;
+let privacyMode = localStorage.getItem('aceBudgetPrivacy') === '1';
+let expandedEntryId = null;
+
+function load(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return JSON.parse(JSON.stringify(fallback));
+    return JSON.parse(raw);
+  } catch (e) { return JSON.parse(JSON.stringify(fallback)); }
+}
+let toastTimer = null;
+function showToast(message, isError) {
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.toggle('error', !!isError);
+  el.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1600);
+}
+let hasUnsavedChanges = false;
+function markDirty() {
+  hasUnsavedChanges = true;
+  const ok = persist();
+  if (!ok) showToast("⚠️ Couldn't save, check your browser storage", true);
+}
+function persist() {
+  try {
+    localStorage.setItem('aceBudgetConfig', JSON.stringify(config));
+    localStorage.setItem('aceBudgetMonths', JSON.stringify(months));
+    hasUnsavedChanges = false;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+function manualSave() {
+  const ok = persist();
+  showToast(ok ? '✅ All changes saved' : "⚠️ Couldn't save, try again", !ok);
+  renderContent(false);
+}
+function unsavedBadge() {
+  return hasUnsavedChanges ? `<span style="color:var(--rust); font-size:12px; font-weight:600; align-self:center;">● unsaved changes</span>` : '';
+}
+window.addEventListener('beforeunload', function(e) {
+  if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
+});
+
+// ---------------- theme ----------------
+function initTheme() {
+  const saved = localStorage.getItem('aceBudgetTheme');
+  const theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', theme);
+  updateThemeBtn();
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('aceBudgetTheme', next);
+  updateThemeBtn();
+  if (activeTab === 'savings') renderSavingsChart();
+}
+function updateThemeBtn() {
+  const theme = document.documentElement.getAttribute('data-theme');
+  document.getElementById('themeToggle').textContent = theme === 'dark' ? '🌙 Dark mode' : '☀️ Light mode';
+}
+
+// ---------------- privacy ----------------
+function togglePrivacy() {
+  privacyMode = !privacyMode;
+  localStorage.setItem('aceBudgetPrivacy', privacyMode ? '1' : '0');
+  renderContent();
+}
+function incomeStat(amount) {
+  if (privacyMode) return { attrs: '', text: `${config.currency || 'AED'} ••••••` };
+  return { attrs: `data-num="${amount}" data-prefix="${config.currency || 'AED'} "`, text: AED(amount) };
+}
+
+// ---------------- helpers ----------------
+function keyToLabel(key) { const [y,m] = key.split('-').map(Number); return `${MONTH_NAMES[m-1]} ${y}`; }
+function addMonthsToLabel(key, n) { const [y,m]=key.split('-').map(Number); const d=new Date(y,m-1+n,1); return `${MONTH_NAMES[d.getMonth()]} ${d.getFullYear()}`; }
+function nextMonthKey() {
+  const keys = Object.keys(months).sort(); const last = keys[keys.length-1];
+  const [y,m] = last.split('-').map(Number); const d = new Date(y, m-1+1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function debtProgress(d) {
+  const baseline = Number(d.paymentsMade) || 0;
+  const tracked = d.paidMonths || [];
+  const totalMade = baseline + tracked.length;
+  const remaining = d.termMonths ? Math.max(d.termMonths - totalMade, 0) : null;
+  const pct = d.termMonths ? Math.min((totalMade / d.termMonths) * 100, 100) : 0;
+
+  // Amount-based tracking: reflects real AED paid, so overpaying or underpaying
+  // a given month (logged via Monthly Log) speeds up or slows down the payoff.
+  const monthlyPayment = Number(d.monthlyPayment) || 0;
+  const totalOwed = d.termMonths ? d.termMonths * monthlyPayment : null;
+  let paidAmount = baseline * monthlyPayment;
+  tracked.forEach(mk => {
+    const month = months[mk];
+    const entry = month ? month.entries.find(e => e.linkedDebtId === d.id) : null;
+    paidAmount += entry ? Number(entry.amount) : monthlyPayment;
+  });
+  const remainingAmount = totalOwed !== null ? Math.max(totalOwed - paidAmount, 0) : null;
+  const pctByAmount = totalOwed ? Math.min((paidAmount / totalOwed) * 100, 100) : pct;
+  const monthsLeftAtUsualRate = (remainingAmount !== null && monthlyPayment > 0) ? Math.ceil(remainingAmount / monthlyPayment) : null;
+
+  return { totalMade, remaining, pct, paidAmount, totalOwed, remainingAmount, pctByAmount, monthsLeftAtUsualRate };
+}
+
+function computeSpendingInsights() {
+  const keys = Object.keys(months).sort();
+  const currentKey = keys[keys.length - 1];
+  const current = months[currentKey];
+  const historyKeys = keys.filter(k => k !== currentKey);
+
+  const catStats = {};
+  historyKeys.forEach(k => {
+    months[k].entries.forEach(e => {
+      if (e.category === 'Savings') return;
+      catStats[e.category] = catStats[e.category] || { sum: 0, count: 0 };
+      catStats[e.category].sum += Number(e.amount);
+      catStats[e.category].count += 1;
+    });
+  });
+
+  const flagged = [];
+  current.entries.forEach(e => {
+    if (e.category === 'Savings' || Number(e.amount) <= 0) return;
+    const stat = catStats[e.category];
+    if (stat && stat.count > 0) {
+      const avg = stat.sum / stat.count;
+      if (avg > 0 && Number(e.amount) > avg * 1.15) {
+        flagged.push({ category: e.category, amount: Number(e.amount), avg, pctUp: (Number(e.amount) / avg - 1) * 100 });
+      }
+    }
+  });
+  flagged.sort((a, b) => b.pctUp - a.pctUp);
+
+  const spendable = current.entries.filter(e => e.category !== 'Savings' && Number(e.amount) > 0);
+  const spendTotal = spendable.reduce((s, e) => s + Number(e.amount), 0);
+  const topSpends = spendable.slice().sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 3)
+    .map(e => ({ category: e.category, amount: Number(e.amount), pctOfSpend: spendTotal > 0 ? (Number(e.amount) / spendTotal * 100) : 0 }));
+
+  const tips = [];
+  const cur = config.currency || 'AED';
+  const pendingItems = current.entries.filter(e => e.status === 'Pending');
+  if (pendingItems.length) {
+    const pendingSum = pendingItems.reduce((s, e) => s + Number(e.amount), 0);
+    tips.push(`You still have ${pendingItems.length} item${pendingItems.length > 1 ? 's' : ''} marked Pending this month (${cur} ${Math.round(pendingSum).toLocaleString('en-US')}). Settle those so your Remaining number stays accurate.`);
+  }
+  const ccEntry = current.entries.find(e => /credit card/i.test(e.category) && Number(e.amount) > 0);
+  if (ccEntry) {
+    tips.push(`Credit Card shows ${cur} ${Math.round(Number(ccEntry.amount)).toLocaleString('en-US')} this month. Pay it in full where you can, carrying a balance is the most expensive way to spend.`);
+  }
+  const savEntry = current.entries.find(e => e.category === 'Savings');
+  const savedThisMonth = savEntry ? Number(savEntry.amount) : 0;
+  if (savedThisMonth < config.monthlyTarget) {
+    tips.push(`You saved ${cur} ${Math.round(savedThisMonth).toLocaleString('en-US')} this month, below your ${cur} ${config.monthlyTarget.toLocaleString('en-US')} target. Even a small top-up keeps the average moving in the right direction.`);
+  }
+  if (!flagged.length && !pendingItems.length) {
+    tips.push(`Nothing looks unusually high this month, that's good control. Keep an eye on Extras and Credit Card, they tend to be where budgets slip.`);
+  }
+
+  return { flagged, topSpends, tips, currentLabel: current.label || keyToLabel(currentKey) };
+}
+
+function buildTemplateEntries() {
+  const entries = [];
+  config.fixedCosts.forEach(f => entries.push({ id: uid(), category: f.name, amount: f.amount, status:'', remarks:'', linkedDebtId: null, expenses: [] }));
+  config.debts.forEach(d => {
+    const { remaining } = debtProgress(d);
+    if (remaining === null || remaining > 0) entries.push({ id: uid(), category: d.name, amount: d.monthlyPayment, status:'', remarks:'', linkedDebtId: d.id, expenses: [] });
+  });
+  const fixedTotal = config.fixedCosts.reduce((s,f)=>s+Number(f.amount),0);
+  const debtTotal = config.debts.reduce((s,d)=>{
+    const { remaining } = debtProgress(d);
+    const active = remaining === null || remaining > 0;
+    return s + (active ? Number(d.monthlyPayment):0);
+  },0);
+  const available = config.income - fixedTotal - debtTotal;
+  const savings = Math.max(Math.min(Math.round(config.monthlyTarget), available), 0);
+  const extras = Math.max(Math.round(available-savings),0);
+  entries.push({ id: uid(), category:'Savings', amount: savings, status:'', remarks:'', linkedDebtId: null, expenses: [] });
+  entries.push({ id: uid(), category:'Extras', amount: extras, status:'', remarks:'', linkedDebtId: null, expenses: [] });
+  return entries;
+}
+
+// ---------------- tabs ----------------
+const TABS = [
+  { id:'dashboard', label:'Dashboard', icon:'🏠' },
+  { id:'log', label:'Monthly Log', icon:'📒' },
+  { id:'debt', label:'Debt Tracker', icon:'💳' },
+  { id:'savings', label:'Savings', icon:'📈' },
+  { id:'goals', label:'Goals', icon:'🎯' },
+  { id:'settings', label:'Settings', icon:'⚙️' },
+];
+function renderTabs() {
+  document.getElementById('tabs').innerHTML = TABS.map(t =>
+    `<button class="tab-btn ${activeTab===t.id?'active':''}" onclick="setTab('${t.id}')">${t.icon} ${t.label}</button>`
+  ).join('');
+}
+function setTab(id) { activeTab = id; renderTabs(); renderContent(true); }
+
+function renderContent(fullAnim) {
+  if (fullAnim === undefined) fullAnim = true;
+  const c = document.getElementById('content');
+  c.classList.toggle('quiet', !fullAnim);
+  if (fullAnim) {
+    // restart the fade-in on the content container each time we switch views
+    c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
+  }
+
+  if (activeTab === 'dashboard') c.innerHTML = dashboardHTML();
+  if (activeTab === 'log') c.innerHTML = logHTML();
+  if (activeTab === 'debt') c.innerHTML = debtHTML();
+  if (activeTab === 'savings') { c.innerHTML = savingsHTML(); renderSavingsChart(); }
+  if (activeTab === 'goals') c.innerHTML = goalsHTML();
+  if (activeTab === 'settings') c.innerHTML = settingsHTML();
+
+  if (fullAnim) {
+    staggerCards();
+    animateNumbers();
+  }
+  animateProgressBars(!fullAnim);
+  checkCelebrations();
+  autoGrowTextareas();
+  updateLiveClock();
+}
+
+function autoGrowTextareas() {
+  document.querySelectorAll('textarea.wrap-input').forEach(t => {
+    t.style.height = 'auto';
+    t.style.height = (t.scrollHeight) + 'px';
+  });
+}
+function growOnInput(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+function staggerCards() {
+  document.querySelectorAll('#content .card').forEach((card, i) => {
+    card.style.animationDelay = `${Math.min(i * 60, 300)}ms`;
+  });
+  document.querySelectorAll('#content .stop-dot').forEach((dot, i) => {
+    dot.style.animationDelay = `${i * 120}ms`;
+  });
+}
+
+function animateProgressBars(instant) {
+  document.querySelectorAll('.progress-fill[data-target]').forEach(bar => {
+    const target = parseFloat(bar.getAttribute('data-target')) || 0;
+    if (instant) {
+      bar.style.transition = 'none';
+      bar.style.width = target + '%';
+    } else {
+      bar.style.transition = '';
+      bar.style.width = '0%';
+      requestAnimationFrame(() => requestAnimationFrame(() => { bar.style.width = target + '%'; }));
+    }
+  });
+}
+
+function animateNumbers() {
+  document.querySelectorAll('.value[data-num]').forEach(el => {
+    const end = parseFloat(el.getAttribute('data-num')) || 0;
+    const prefix = el.getAttribute('data-prefix') || '';
+    const suffix = el.getAttribute('data-suffix') || '';
+    const decimals = el.hasAttribute('data-decimals') ? 1 : 0;
+    const duration = 700;
+    const start = performance.now();
+    function tick(now) {
+      const p = Math.min((now - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const val = end * eased;
+      el.textContent = prefix + (decimals ? val.toFixed(1) : Math.round(val).toLocaleString('en-US')) + suffix;
+      if (p < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+function checkCelebrations() {
+  let shouldCelebrate = false;
+  config.debts.forEach(d => {
+    const { totalMade } = debtProgress(d);
+    if (d.termMonths > 0 && totalMade >= d.termMonths) {
+      const flagKey = 'celebrated-' + d.id;
+      if (!sessionStorage.getItem(flagKey)) { shouldCelebrate = true; sessionStorage.setItem(flagKey, '1'); }
+    }
+  });
+  const keys = Object.keys(months).sort();
+  let cumulative = 0;
+  keys.forEach(k => { const e = months[k].entries.find(e=>e.category==='Savings'); cumulative += e?Number(e.amount):0; });
+  if (cumulative >= config.emergencyFundGoal && !sessionStorage.getItem('celebrated-goal')) {
+    shouldCelebrate = true; sessionStorage.setItem('celebrated-goal', '1');
+  }
+  (config.goals || []).forEach(g => {
+    if (g.targetAmount > 0 && g.savedAmount >= g.targetAmount) {
+      const flagKey = 'celebrated-goal-' + g.id;
+      if (!sessionStorage.getItem(flagKey)) { shouldCelebrate = true; sessionStorage.setItem(flagKey, '1'); }
+    }
+  });
+  if (shouldCelebrate) confettiBurst();
+}
+
+function confettiBurst() {
+  const colors = ['#C9A24B', '#3E9C87', '#D9694A', '#E8C878'];
+  const layer = document.createElement('div');
+  layer.style.cssText = 'position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden;';
+  document.body.appendChild(layer);
+  for (let i = 0; i < 40; i++) {
+    const piece = document.createElement('div');
+    const size = 6 + Math.random() * 6;
+    piece.style.cssText = `
+      position:absolute; top:-10px; left:${Math.random()*100}%;
+      width:${size}px; height:${size}px; background:${colors[i % colors.length]};
+      border-radius:${Math.random() > 0.5 ? '50%' : '2px'};
+      animation: confettiFall ${1.6 + Math.random()*1.2}s ease-in forwards;
+      animation-delay: ${Math.random()*0.4}s;
+    `;
+    layer.appendChild(piece);
+  }
+  setTimeout(() => layer.remove(), 3200);
+}
+
+// ---------------- Dashboard + Route ----------------
+function routeHTML() {
+  const keys = Object.keys(months).sort();
+  const currentKey = keys[keys.length-1];
+  const dudu = config.debts.find(d => d.id==='dudu') || config.debts.find(d=>/gold/i.test(d.type||''));
+  const smaug = config.debts.find(d => d.id==='smaug') || config.debts[0];
+  const cumulative = keys.reduce((s,k)=>{ const e = months[k].entries.find(e=>e.category==='Savings'); return s + (e?Number(e.amount):0); },0);
+  const avg = keys.length ? cumulative/keys.length : 1;
+  const remainingToGoal = Math.max(config.emergencyFundGoal - cumulative, 0);
+  const monthsToGoal = avg>0 ? Math.ceil(remainingToGoal/avg) : null;
+
+  const stops = [{ icon:'📍', label:'Now', sub: keyToLabel(currentKey) }];
+  if (dudu) { const { remaining } = debtProgress(dudu); stops.push({ icon:'💰', label:'Gold Plan Done', sub: remaining>0?addMonthsToLabel(currentKey,remaining):'Complete' }); }
+  stops.push({ icon:'🚩', label:'Emergency Fund Full', sub: monthsToGoal===null?'—':(monthsToGoal<=0?'Complete':addMonthsToLabel(currentKey,monthsToGoal)) });
+  if (smaug) { const { remaining } = debtProgress(smaug); stops.push({ icon:'🚗', label:'Smaug Paid Off', sub: remaining>0?addMonthsToLabel(currentKey,remaining):'Complete' }); }
+
+  return `
+  <div class="route">
+    <p class="route-title">Your Route</p>
+    <p class="route-sub">tracking since July 2026</p>
+    <div class="route-track">
+      <div class="route-line"></div>
+      ${stops.map(s => `
+        <div class="stop">
+          <div class="stop-dot" style="background: var(--gold);">${s.icon}</div>
+          <div class="stop-label">${s.label}</div>
+          <div class="stop-sub">${s.sub}</div>
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function dashboardHTML() {
+  const keys = Object.keys(months).sort();
+  const currentKey = keys[keys.length-1];
+  const current = months[currentKey];
+  const fixedTotal = config.fixedCosts.reduce((s,f)=>s+Number(f.amount),0);
+  const activeDebts = config.debts.filter(d => { const { remaining } = debtProgress(d); return remaining === null || remaining > 0; });
+  const debtTotal = activeDebts.reduce((s,d)=>s+Number(d.monthlyPayment),0);
+  const available = config.income - fixedTotal - debtTotal;
+  const recSavings = Math.max(Math.min(Math.round(config.monthlyTarget), available), 0);
+  const recExtras = available - recSavings;
+  const overcommitted = config.monthlyTarget > available;
+  const currentTotal = current.entries.reduce((s,e)=>s+Number(e.amount),0);
+  const currentRemaining = current.income - currentTotal;
+  const savEntry = current.entries.find(e=>e.category==='Savings');
+  const savingsRate = (savEntry && current.income > 0) ? (Number(savEntry.amount)/current.income*100) : 0;
+  const inc = incomeStat(config.income);
+  const paidEntries = current.entries.filter(e => e.status === 'Paid');
+  const pendingEntries = current.entries.filter(e => e.status === 'Pending');
+  const unmarkedEntries = current.entries.filter(e => e.status !== 'Paid' && e.status !== 'Pending');
+
+  return `
+  ${routeHTML()}
+  <div class="grid grid-3">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="label" style="margin-bottom:0;">Monthly Income</div>
+        <button class="icon-btn" onclick="togglePrivacy()" title="${privacyMode ? 'Show amount' : 'Hide amount'}" style="padding:6px 8px; font-size:15px;">${privacyMode ? '🙈' : '👁️'}</button>
+      </div>
+      <div class="value" ${inc.attrs}>${inc.text}</div>
+    </div>
+    <div class="card"><div class="label">Fixed Costs</div><div class="value" style="color:var(--text-dim)" data-num="${fixedTotal}" data-prefix="${config.currency || 'AED'} ">${AED(fixedTotal)}</div></div>
+    <div class="card"><div class="label">Active Commitments</div><div class="value" style="color:var(--gold)" data-num="${debtTotal}" data-prefix="${config.currency || 'AED'} ">${AED(debtTotal)}</div></div>
+  </div>
+  <div class="grid grid-2">
+    <div class="card">
+      <div class="label">💰 Where Your Income Goes</div>
+      <div style="margin-top:6px;">
+        <div class="flow-row"><span class="flow-label">Income</span><span>${AED(config.income)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Fixed Costs</span><span style="color:var(--text-dim)">−${AED(fixedTotal)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Active Commitments</span><span style="color:var(--gold)">−${AED(debtTotal)}</span></div>
+        <div class="flow-row total"><span class="flow-label">= Left after bills</span><span style="color:var(--teal)">${AED(available)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Savings Target</span><span style="color:var(--teal)">−${AED(recSavings)}</span></div>
+        <div class="flow-row total"><span class="flow-label">= Flexible spending</span><span style="color:var(--gold)">${AED(recExtras)}</span></div>
+      </div>
+      ${overcommitted ? `<div class="note" style="margin-top:8px; color:var(--rust);">Your savings target is more than you have left after bills, adjust it in the Savings tab.</div>` : `<div class="note" style="margin-top:8px;">Change your Savings Target in the Savings tab, this breakdown updates automatically.</div>`}
+    </div>
+    <div class="card">
+      <div class="label">${current.label} snapshot</div>
+      <div style="display:flex; gap:24px; margin-top:8px;">
+        <div><div class="label" style="margin-bottom:2px">Remaining</div><div class="value small" style="color:${currentRemaining>=0?'var(--teal)':'var(--rust)'}" data-num="${currentRemaining}" data-prefix="${config.currency || 'AED'} ">${AED(currentRemaining)}</div></div>
+        <div><div class="label" style="margin-bottom:2px">Savings Rate</div><div class="value small" data-num="${savingsRate}" data-suffix="%" data-decimals="1">${savingsRate.toFixed(1)}%</div></div>
+      </div>
+      <div style="display:flex; gap:16px; margin-top:14px; padding-top:12px; border-top:1px solid var(--panel-line);">
+        <div><div class="label" style="margin-bottom:2px; color:var(--teal);">✅ Paid</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${paidEntries.length}</div></div>
+        <div><div class="label" style="margin-bottom:2px; color:var(--rust);">⏳ Pending</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${pendingEntries.length}</div></div>
+        <div><div class="label" style="margin-bottom:2px; color:var(--text-dim);">— Unmarked</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${unmarkedEntries.length}</div></div>
+      </div>
+      ${pendingEntries.length ? `
+      <div style="margin-top:10px;">
+        <div class="label" style="margin-bottom:4px;">Still owed this month</div>
+        ${pendingEntries.slice(0,4).map(e => `
+          <div style="display:flex; justify-content:space-between; font-size:13px; padding:2px 0;">
+            <span style="color:var(--text-dim);">${escapeHtml(e.category)}</span>
+            <span class="amt">${AED(e.amount)}</span>
+          </div>`).join('')}
+        ${pendingEntries.length > 4 ? `<div class="note" style="margin-top:2px;">+${pendingEntries.length - 4} more in Monthly Log</div>` : ''}
+      </div>` : `<div class="note" style="margin-top:10px; color:var(--teal);">Nothing pending, everything logged this month is settled.</div>`}
+    </div>
+  </div>
+  <div class="card">
+    <div class="note">Priority order: keep fixed costs and any active loans paid on time, let forced-savings plans (like a gold plan) finish their term, build a 3-month emergency fund, then grow ongoing savings.</div>
+  </div>
+  ${insightsHTML()}`;
+}
+
+function insightsHTML() {
+  const { flagged, topSpends, tips, currentLabel } = computeSpendingInsights();
+  return `
+  <div class="card">
+    <div class="label">💡 Where Your Money Went — ${escapeAttr(currentLabel)}</div>
+    ${topSpends.length ? `
+    <div style="margin-top:10px;">
+      ${topSpends.map(t => `
+        <div style="margin-bottom:8px;">
+          <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:3px;">
+            <span>${escapeHtml(t.category)}</span>
+            <span class="amt">${AED(t.amount)} · ${t.pctOfSpend.toFixed(0)}%</span>
+          </div>
+          <div class="progress-bar" style="height:6px;"><div class="progress-fill" data-target="${t.pctOfSpend}" style="background:var(--gold);"></div></div>
+        </div>`).join('')}
+    </div>` : `<div class="note" style="margin-top:8px;">No spending logged for this month yet.</div>`}
+
+    ${flagged.length ? `
+    <div style="margin-top:14px;">
+      <div class="label" style="margin-bottom:6px;">Higher than your usual</div>
+      ${flagged.map(f => `
+        <div class="note" style="margin-bottom:6px;">⚠️ <strong style="color:var(--text);">${escapeHtml(f.category)}</strong> is ${config.currency||'AED'} ${Math.round(f.amount).toLocaleString('en-US')} this month, about ${f.pctUp.toFixed(0)}% above your usual ${config.currency||'AED'} ${Math.round(f.avg).toLocaleString('en-US')}.</div>`).join('')}
+    </div>` : ''}
+
+    <div style="margin-top:14px;">
+      <div class="label" style="margin-bottom:6px;">Tips</div>
+      ${tips.map(t => `<div class="note" style="margin-bottom:6px;">🔸 ${t}</div>`).join('')}
+    </div>
+  </div>`;
+}
+
+// ---------------- Monthly Log ----------------
+function todayISO() { return new Date().toISOString().slice(0,10); }
+
+// ---------------- custom date picker ----------------
+let datePickerEl = null;
+let datePickerTarget = null;
+let datePickerViewDate = null;
+
+function parseISODate(str) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || '');
+  if (!m) return null;
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+function isoFromDate(dt) {
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+function isSameDate(a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+
+function openDatePicker(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (datePickerEl && datePickerTarget === input) { closeDatePicker(); return; }
+  closeDatePicker();
+  datePickerTarget = input;
+  const parsed = parseISODate(input.value) || new Date();
+  datePickerViewDate = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+  datePickerEl = document.createElement('div');
+  datePickerEl.className = 'date-picker-popup';
+  renderDatePicker();
+  document.body.appendChild(datePickerEl);
+  const rect = input.getBoundingClientRect();
+  datePickerEl.style.position = 'fixed';
+  datePickerEl.style.top = (rect.bottom + 6) + 'px';
+  datePickerEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 246)) + 'px';
+  datePickerEl.style.zIndex = 9999;
+  setTimeout(() => document.addEventListener('mousedown', handleDatePickerOutsideClick), 0);
+}
+function closeDatePicker() {
+  if (datePickerEl) { datePickerEl.remove(); datePickerEl = null; }
+  document.removeEventListener('mousedown', handleDatePickerOutsideClick);
+}
+function handleDatePickerOutsideClick(e) {
+  if (datePickerEl && !datePickerEl.contains(e.target) && e.target !== datePickerTarget) closeDatePicker();
+}
+function renderDatePicker() {
+  const y = datePickerViewDate.getFullYear();
+  const m = datePickerViewDate.getMonth();
+  const first = new Date(y, m, 1);
+  const startDow = first.getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const monthLabel = datePickerViewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const selected = parseISODate(datePickerTarget.value);
+  const today = new Date();
+  let cells = '';
+  for (let i = 0; i < startDow; i++) cells += `<div></div>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isSel = selected && isSameDate(selected, new Date(y, m, d));
+    const isToday = isSameDate(new Date(y, m, d), today);
+    cells += `<button type="button" class="dp-day ${isSel ? 'dp-selected' : ''} ${isToday ? 'dp-today' : ''}" onclick="pickDate(${y},${m},${d})">${d}</button>`;
+  }
+  datePickerEl.innerHTML = `
+    <div class="dp-header">
+      <button type="button" class="icon-btn" onclick="dpNav(-1)">‹</button>
+      <div>${monthLabel}</div>
+      <button type="button" class="icon-btn" onclick="dpNav(1)">›</button>
+    </div>
+    <div class="dp-grid dp-dow">
+      <div>Su</div><div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div>
+    </div>
+    <div class="dp-grid">${cells}</div>
+    <button type="button" class="add-link" style="margin-top:8px;" onclick="pickToday()">📍 Today</button>
+  `;
+}
+function dpNav(delta) {
+  datePickerViewDate = new Date(datePickerViewDate.getFullYear(), datePickerViewDate.getMonth() + delta, 1);
+  renderDatePicker();
+}
+function pickDate(y, m, d) {
+  datePickerTarget.value = isoFromDate(new Date(y, m, d));
+  closeDatePicker();
+}
+function pickToday() {
+  const now = new Date();
+  pickDate(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+// ---------------- custom month picker (for goal target month) ----------------
+let monthPickerEl = null;
+let monthPickerTarget = null;
+let monthPickerViewYear = null;
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function parseYearMonth(str) {
+  const m = /^(\d{4})-(\d{2})$/.exec(str || '');
+  if (!m) return null;
+  return { y: Number(m[1]), m: Number(m[2]) - 1 };
+}
+function openMonthPicker(inputId) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  if (monthPickerEl && monthPickerTarget === input) { closeMonthPicker(); return; }
+  closeMonthPicker();
+  monthPickerTarget = input;
+  const parsed = parseYearMonth(input.value);
+  monthPickerViewYear = parsed ? parsed.y : new Date().getFullYear();
+  monthPickerEl = document.createElement('div');
+  monthPickerEl.className = 'date-picker-popup';
+  renderMonthPicker();
+  document.body.appendChild(monthPickerEl);
+  const rect = input.getBoundingClientRect();
+  monthPickerEl.style.position = 'fixed';
+  monthPickerEl.style.top = (rect.bottom + 6) + 'px';
+  monthPickerEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 246)) + 'px';
+  monthPickerEl.style.zIndex = 9999;
+  setTimeout(() => document.addEventListener('mousedown', handleMonthPickerOutsideClick), 0);
+}
+function closeMonthPicker() {
+  if (monthPickerEl) { monthPickerEl.remove(); monthPickerEl = null; }
+  document.removeEventListener('mousedown', handleMonthPickerOutsideClick);
+}
+function handleMonthPickerOutsideClick(e) {
+  if (monthPickerEl && !monthPickerEl.contains(e.target) && e.target !== monthPickerTarget) closeMonthPicker();
+}
+function renderMonthPicker() {
+  const selected = parseYearMonth(monthPickerTarget.value);
+  const now = new Date();
+  let cells = '';
+  for (let mi = 0; mi < 12; mi++) {
+    const isSel = selected && selected.y === monthPickerViewYear && selected.m === mi;
+    const isNow = now.getFullYear() === monthPickerViewYear && now.getMonth() === mi;
+    cells += `<button type="button" class="dp-day ${isSel ? 'dp-selected' : ''} ${isNow ? 'dp-today' : ''}" style="padding:10px 0;" onclick="pickMonth(${monthPickerViewYear},${mi})">${MONTH_SHORT[mi]}</button>`;
+  }
+  monthPickerEl.innerHTML = `
+    <div class="dp-header">
+      <button type="button" class="icon-btn" onclick="mpNav(-1)">‹</button>
+      <div>${monthPickerViewYear}</div>
+      <button type="button" class="icon-btn" onclick="mpNav(1)">›</button>
+    </div>
+    <div class="dp-grid" style="grid-template-columns: repeat(3, 1fr); gap:6px;">${cells}</div>
+    <button type="button" class="add-link" style="margin-top:8px;" onclick="pickThisMonth()">📍 This Month</button>
+  `;
+}
+function mpNav(delta) { monthPickerViewYear += delta; renderMonthPicker(); }
+function pickMonth(y, m) {
+  monthPickerTarget.value = `${y}-${String(m + 1).padStart(2, '0')}`;
+  monthPickerTarget.dispatchEvent(new Event('change'));
+  closeMonthPicker();
+}
+function pickThisMonth() {
+  const now = new Date();
+  pickMonth(now.getFullYear(), now.getMonth());
+}
+function updateLiveClock() {
+  const el = document.getElementById('liveClock');
+  if (!el) return;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  el.textContent = `🕐 ${dateStr} · ${timeStr}`;
+}
+setInterval(updateLiveClock, 1000);
+
+function logHTML() {
+  const keys = Object.keys(months).sort();
+  const month = months[activeMonthKey] || months[keys[keys.length-1]];
+  const total = month.entries.reduce((s,e)=>s+Number(e.amount),0);
+  const remaining = month.income - total;
+  const paidTotal = month.entries.filter(e=>e.status==='Paid').reduce((s,e)=>s+Number(e.amount),0);
+  const pendingTotal = total - paidTotal;
+  const inc = incomeStat(month.income);
+
+  const rows = month.entries.map(e => {
+    const debt = e.linkedDebtId ? config.debts.find(d => d.id === e.linkedDebtId) : null;
+    const expenses = e.expenses || [];
+    const isExpanded = expandedEntryId === e.id;
+    return `
+    <div class="entry-item">
+      <div class="entry-main">
+        <textarea class="wrap-input entry-cat" rows="1" oninput="growOnInput(this)" onchange="updateEntry('${e.id}','category',this.value)">${escapeHtml(e.category)}</textarea>
+        <textarea class="wrap-input entry-remarks" rows="1" oninput="growOnInput(this)" onchange="updateEntry('${e.id}','remarks',this.value)" placeholder="Remarks (optional)">${escapeHtml(e.remarks)}</textarea>
+        ${debt ? `<div class="label" style="margin-top:4px; color:var(--gold);">🔗 linked to ${escapeAttr(debt.name)}</div>` : ''}
+        ${expenses.length ? `<button class="add-link" style="margin-top:6px;" onclick="toggleExpenseList('${e.id}')">🧾 ${expenses.length} expense${expenses.length>1?'s':''} logged ${isExpanded?'▲':'▼'}</button>` : ''}
+        ${isExpanded ? `
+          <div style="margin-top:8px; border-left:2px solid var(--panel-line); padding-left:10px;">
+            ${expenses.map(x => `
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;">
+                <div style="color:var(--text-dim); font-family:'JetBrains Mono'; min-width:80px;">${x.date}</div>
+                <div style="flex:1;">${escapeHtml(x.description)}</div>
+                <div class="amt">${AED(x.amount)}</div>
+                <button class="icon-btn" onclick="removeExpense('${e.id}','${x.id}')" title="Remove">🗑️</button>
+              </div>`).join('')}
+          </div>` : ''}
+      </div>
+      <div class="entry-meta">
+        <div style="width:110px;"><div class="label">Amount</div><input type="number" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)"/></div>
+        <div style="width:110px;">
+          <div class="label">Status</div>
+          <select onchange="updateEntry('${e.id}','status',this.value)">
+            <option value="" ${e.status===''?'selected':''}>—</option>
+            <option value="Paid" ${e.status==='Paid'?'selected':''}>Paid</option>
+            <option value="Pending" ${e.status==='Pending'?'selected':''}>Pending</option>
+          </select>
+        </div>
+        <div style="flex:1 1 200px; min-width:200px;">
+          <div class="label">Linked commitment</div>
+          <select onchange="updateEntry('${e.id}','linkedDebtId',this.value)" style="width:100%;">
+            <option value="">— none —</option>
+            ${config.debts.map(d => `<option value="${d.id}" ${e.linkedDebtId===d.id?'selected':''}>${escapeAttr(d.name)}</option>`).join('')}
+          </select>
+        </div>
+        <button class="icon-btn" onclick="removeEntry('${e.id}')" title="Remove row" style="align-self:flex-end;">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="month-select-row">
+    <select id="monthSelect" onchange="setActiveMonth(this.value)" style="max-width: 220px;">
+      ${keys.map(k => `<option value="${k}" ${k===activeMonthKey?'selected':''}>${months[k].label || keyToLabel(k)}</option>`).join('')}
+    </select>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
+      <button class="btn btn-primary" onclick="addNextMonth()">➕ Add ${keyToLabel(nextMonthKey())}</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="label">🧾 Log an Expense</div>
+    <div class="note" style="margin:6px 0 10px;">Bought something today? Log it here and pick which category it should come out of.</div>
+    <div class="grid grid-4">
+      <div>
+        <div class="label">Date</div>
+        <div style="position:relative;">
+          <input type="text" id="expDate" value="${todayISO()}" placeholder="YYYY-MM-DD" style="padding-right:42px;"/>
+          <button type="button" class="icon-btn" onclick="openDatePicker('expDate')" title="Pick a date" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); padding:6px 8px; font-size:16px;">📅</button>
+        </div>
+      </div>
+      <div><div class="label">Description</div><input type="text" id="expDesc" placeholder="e.g. Lunch"/></div>
+      <div><div class="label">Amount</div><input type="number" id="expAmount" placeholder="${config.currency||'AED'}"/></div>
+      <div><div class="label">Deduct From</div>
+        <select id="expCategory">
+          ${month.entries.map(e => `<option value="${e.id}">${escapeAttr(e.category)}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="margin-top:10px;" onclick="addExpense()">➕ Add Expense</button>
+  </div>
+
+  <div class="card">
+    ${rows}
+    <button class="add-link" onclick="addRow()">➕ Add row</button>
+  </div>
+  <div class="grid grid-4">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="label" style="margin-bottom:0;">Income</div>
+        <button class="icon-btn" onclick="togglePrivacy()" title="${privacyMode ? 'Show amount' : 'Hide amount'}" style="padding:6px 8px; font-size:15px;">${privacyMode ? '🙈' : '👁️'}</button>
+      </div>
+      <div class="value" ${inc.attrs}>${inc.text}</div>
+    </div>
+    <div class="card"><div class="label">Paid So Far</div><div class="value" style="color:var(--teal)" data-num="${paidTotal}" data-prefix="${config.currency || 'AED'} ">${AED(paidTotal)}</div></div>
+    <div class="card"><div class="label">Still Pending</div><div class="value" style="color:var(--rust)" data-num="${pendingTotal}" data-prefix="${config.currency || 'AED'} ">${AED(pendingTotal)}</div></div>
+    <div class="card"><div class="label">Remaining</div><div class="value" style="color:${remaining>=0?'var(--teal)':'var(--rust)'}" data-num="${remaining}" data-prefix="${config.currency || 'AED'} ">${AED(remaining)}</div></div>
+  </div>`;
+}
+function setActiveMonth(k) { activeMonthKey = k; expandedEntryId = null; renderContent(); }
+function syncDebtForEntry(entry) {
+  if (!entry.linkedDebtId) return;
+  const d = config.debts.find(d => d.id === entry.linkedDebtId);
+  if (!d) return;
+  d.paidMonths = d.paidMonths || [];
+  const idx = d.paidMonths.indexOf(activeMonthKey);
+  if (entry.status === 'Paid' && idx === -1) d.paidMonths.push(activeMonthKey);
+  else if (entry.status !== 'Paid' && idx !== -1) d.paidMonths.splice(idx, 1);
+}
+function removeMonthFromDebt(debtId, monthKey) {
+  const d = config.debts.find(d => d.id === debtId);
+  if (!d) return;
+  d.paidMonths = d.paidMonths || [];
+  const idx = d.paidMonths.indexOf(monthKey);
+  if (idx !== -1) d.paidMonths.splice(idx, 1);
+}
+function updateEntry(id, field, value) {
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === id);
+  if (!entry) return;
+  if (field === 'linkedDebtId') {
+    const oldId = entry.linkedDebtId;
+    const newId = value || null;
+    if (oldId && oldId !== newId) removeMonthFromDebt(oldId, activeMonthKey);
+    entry.linkedDebtId = newId;
+    syncDebtForEntry(entry);
+  } else {
+    entry[field] = field === 'amount' ? Number(value) : value;
+    if (field === 'status') syncDebtForEntry(entry);
+  }
+  markDirty();
+  renderContent(false);
+}
+function removeEntry(id) {
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === id);
+  if (entry && entry.linkedDebtId) removeMonthFromDebt(entry.linkedDebtId, activeMonthKey);
+  month.entries = month.entries.filter(e => e.id !== id);
+  markDirty(); renderContent(false);
+}
+function addRow() {
+  months[activeMonthKey].entries.push({ id: uid(), category:'New item', amount:0, status:'', remarks:'', linkedDebtId: null, expenses: [] });
+  markDirty(); renderContent(false);
+}
+function addNextMonth() {
+  const key = nextMonthKey();
+  months[key] = { label: keyToLabel(key), income: config.income, entries: buildTemplateEntries() };
+  activeMonthKey = key;
+  markDirty(); renderContent(false);
+}
+function toggleExpenseList(id) { expandedEntryId = (expandedEntryId === id) ? null : id; renderContent(false); }
+function addExpense() {
+  const dateEl = document.getElementById('expDate');
+  const descEl = document.getElementById('expDesc');
+  const amountEl = document.getElementById('expAmount');
+  const catEl = document.getElementById('expCategory');
+  const date = (dateEl && dateEl.value) || todayISO();
+  const description = (descEl && descEl.value.trim()) || 'Expense';
+  const amount = Number(amountEl && amountEl.value) || 0;
+  const targetId = catEl && catEl.value;
+  if (amount <= 0 || !targetId) return;
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === targetId);
+  if (!entry) return;
+  entry.expenses = entry.expenses || [];
+  entry.expenses.push({ id: uid(), date, description, amount });
+  entry.amount = Number(entry.amount) - amount;
+  expandedEntryId = targetId;
+  markDirty(); renderContent(false);
+}
+function removeExpense(entryId, expenseId) {
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === entryId);
+  if (!entry) return;
+  const idx = (entry.expenses||[]).findIndex(x => x.id === expenseId);
+  if (idx === -1) return;
+  const amt = Number(entry.expenses[idx].amount);
+  entry.expenses.splice(idx, 1);
+  entry.amount = Number(entry.amount) + amt;
+  markDirty(); renderContent(false);
+}
+
+// ---------------- Debt Tracker ----------------
+function debtHTML() {
+  const keys = Object.keys(months).sort();
+  const currentKey = keys[keys.length-1];
+  const cards = config.debts.map(d => {
+    const { totalMade, remaining, pct, paidAmount, totalOwed, remainingAmount, pctByAmount, monthsLeftAtUsualRate } = debtProgress(d);
+    const payoff = remaining!==null && remaining>0 ? addMonthsToLabel(currentKey, remaining) : 'Paid off';
+    const monthLabel = months[activeMonthKey] ? (months[activeMonthKey].label || keyToLabel(activeMonthKey)) : keyToLabel(activeMonthKey);
+    const isPaidThisMonth = (d.paidMonths || []).includes(activeMonthKey);
+    const isDone = d.termMonths > 0 && remaining === 0;
+    return `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:200px;">
+          <textarea class="wrap-input" rows="1" oninput="growOnInput(this)" onchange="updateDebt('${d.id}','name',this.value)"
+            style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(d.name)}</textarea>
+          <div class="label" style="margin-top:2px;">${escapeAttr(d.type)}</div>
+        </div>
+        <button class="icon-btn" onclick="removeDebt('${d.id}')" title="Remove">🗑️</button>
+      </div>
+      <div class="grid grid-4" style="margin-top:10px;">
+        <div><div class="label">Monthly Payment</div><input type="number" value="${d.monthlyPayment}" onchange="updateDebt('${d.id}','monthlyPayment',this.value)"/></div>
+        <div><div class="label">Term (months)</div><input type="number" value="${d.termMonths}" onchange="updateDebt('${d.id}','termMonths',this.value)"/></div>
+        <div><div class="label">Starting Count</div><input type="number" value="${d.paymentsMade}" onchange="updateDebt('${d.id}','paymentsMade',this.value)"/></div>
+        <div><div class="label">Est. Payoff</div><div style="font-family:'JetBrains Mono'; padding-top:8px;">${payoff}</div></div>
+      </div>
+      ${!isDone && d.termMonths > 0 ? `
+      <button class="btn ${isPaidThisMonth ? '' : 'btn-primary'}" style="margin-top:12px; ${isPaidThisMonth ? `background:var(--teal); color:#fff;` : ''}" onclick="markDebtPaid('${d.id}')">
+        ${isPaidThisMonth ? `✅ Paid for ${monthLabel}` : `Mark paid for ${monthLabel}`}
+      </button>` : ''}
+      ${d.termMonths>0 ? `
+      <div style="margin-top:12px;">
+        <div class="progress-bar"><div class="progress-fill" data-target="${pctByAmount}" style="background:${pctByAmount>=100?'var(--teal)':'var(--gold)'}"></div></div>
+        <div class="label" style="margin-top:4px; font-family:'JetBrains Mono'; text-transform:none;">${totalMade}/${d.termMonths} months marked (${d.paymentsMade} starting + ${(d.paidMonths||[]).length} marked here)</div>
+        <div class="label" style="margin-top:2px; font-family:'JetBrains Mono'; text-transform:none; color:${remainingAmount<=0?'var(--teal)':'var(--gold)'};">
+          ${config.currency||'AED'} ${Math.round(paidAmount).toLocaleString('en-US')} paid of ${config.currency||'AED'} ${Math.round(totalOwed).toLocaleString('en-US')} · ${config.currency||'AED'} ${Math.round(remainingAmount).toLocaleString('en-US')} left${remainingAmount>0 && monthsLeftAtUsualRate ? ` (~${monthsLeftAtUsualRate} more payment${monthsLeftAtUsualRate>1?'s':''} at your usual rate)` : ''}
+        </div>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="month-select-row">
+    <div class="note">Marking a month as paid here also ticks it as "Paid" in your Monthly Log.</div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <select onchange="setActiveMonth(this.value)" style="max-width: 220px;">
+        ${keys.map(k => `<option value="${k}" ${k===activeMonthKey?'selected':''}>${months[k].label || keyToLabel(k)}</option>`).join('')}
+      </select>
+      <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:1fr;">${cards}</div>
+  <button class="add-link" onclick="addDebt()">➕ Add commitment</button>`;
+}
+function markDebtPaid(id) {
+  const d = config.debts.find(d => d.id === id);
+  if (!d) return;
+  d.paidMonths = d.paidMonths || [];
+  const idx = d.paidMonths.indexOf(activeMonthKey);
+  const nowPaid = idx === -1;
+  if (nowPaid) d.paidMonths.push(activeMonthKey);
+  else d.paidMonths.splice(idx, 1);
+  const month = months[activeMonthKey];
+  if (month) {
+    month.entries.filter(e => e.linkedDebtId === id).forEach(e => { e.status = nowPaid ? 'Paid' : ''; });
+  }
+  markDirty(); renderContent(false);
+}
+function updateDebt(id, field, value) {
+  const d = config.debts.find(d => d.id === id);
+  if (!d) return;
+  d[field] = (field==='name'||field==='type') ? value : Number(value);
+  markDirty(); renderContent(false);
+}
+function removeDebt(id) { config.debts = config.debts.filter(d => d.id !== id); markDirty(); renderContent(false); }
+function addDebt() {
+  config.debts.push({ id: uid(), name:'New commitment', type:'Other', monthlyPayment:0, termMonths:0, paymentsMade:0, paidMonths: [] });
+  markDirty(); renderContent(false);
+}
+
+// ---------------- Savings ----------------
+function savingsHTML() {
+  const keys = Object.keys(months).sort();
+  let cumulative = 0;
+  keys.forEach(k => { const e = months[k].entries.find(e=>e.category==='Savings'); cumulative += e?Number(e.amount):0; });
+  const goalPct = config.emergencyFundGoal > 0 ? Math.min((cumulative/config.emergencyFundGoal)*100, 100) : 0;
+
+  return `
+  <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+    <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
+  </div>
+  <div class="grid grid-3">
+    <div class="card"><div class="label">Total Saved So Far</div><div class="value" style="color:var(--teal)" data-num="${cumulative}" data-prefix="${config.currency || 'AED'} ">${AED(cumulative)}</div></div>
+    <div class="card"><div class="label">Monthly Target</div><input type="number" value="${config.monthlyTarget}" onchange="updateConfig('monthlyTarget',this.value)"/></div>
+    <div class="card"><div class="label">Emergency Fund Goal</div><input type="number" value="${config.emergencyFundGoal}" onchange="updateConfig('emergencyFundGoal',this.value)"/></div>
+  </div>
+  <div class="card">
+    <div class="label">Where Is This Kept?</div>
+    <select onchange="updateConfigText('savingsLocation', this.value)" style="margin-top:6px;">
+      <option value="" ${config.savingsLocation===''?'selected':''}>— select —</option>
+      ${LOCATION_OPTIONS.map(loc => `<option value="${loc}" ${config.savingsLocation===loc?'selected':''}>${loc}</option>`).join('')}
+    </select>
+  </div>
+  <div class="card">
+    <div class="label">Emergency Fund Progress</div>
+    <div class="progress-bar" style="height:12px; margin-top:6px;"><div class="progress-fill" data-target="${goalPct}"></div></div>
+    <div class="label" style="margin-top:6px; font-family:'JetBrains Mono'; text-transform:none;">${AED(cumulative)} of ${AED(config.emergencyFundGoal)} (${goalPct.toFixed(0)}%)</div>
+  </div>
+  <div class="card">
+    <div class="label">Actual Savings vs Target</div>
+    <div class="chart-wrap"><canvas id="savingsChart"></canvas></div>
+  </div>`;
+}
+function renderSavingsChart() {
+  const keys = Object.keys(months).sort();
+  const labels = keys.map(k => keyToLabel(k).split(' ')[0]);
+  const actual = keys.map(k => { const e = months[k].entries.find(e=>e.category==='Savings'); return e?Number(e.amount):0; });
+  const target = keys.map(()=>config.monthlyTarget);
+  const styles = getComputedStyle(document.documentElement);
+  const gold = styles.getPropertyValue('--gold').trim();
+  const teal = styles.getPropertyValue('--teal').trim();
+  const textDim = styles.getPropertyValue('--text-dim').trim();
+  const panelLine = styles.getPropertyValue('--panel-line').trim();
+
+  const ctx = document.getElementById('savingsChart');
+  if (!ctx) return;
+  if (chartInstance) chartInstance.destroy();
+  chartInstance = new Chart(ctx, {
+    data: {
+      labels,
+      datasets: [
+        { type:'bar', label:'Actual Savings', data: actual, backgroundColor: gold, borderRadius: 6 },
+        { type:'line', label:'Target', data: target, borderColor: teal, backgroundColor: teal, tension: 0.3, pointRadius: 0, borderWidth: 2 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: textDim, font: { family: 'Inter' } } } },
+      scales: {
+        x: { ticks: { color: textDim, font: { family:'Inter' } }, grid: { color: panelLine } },
+        y: { ticks: { color: textDim, font: { family:'Inter' } }, grid: { color: panelLine } },
+      },
+    },
+  });
+}
+function updateConfig(field, value) {
+  config[field] = Number(value);
+  markDirty(); renderContent(false);
+}
+function updateConfigText(field, value) {
+  config[field] = value;
+  markDirty(); renderContent(false);
+}
+
+// ---------------- currency conversion ----------------
+async function fetchExchangeRate(from, to) {
+  if (!from || !to || from.toUpperCase() === to.toUpperCase()) return 1;
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${encodeURIComponent(from.toUpperCase())}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.result === 'success' && data.rates && typeof data.rates[to.toUpperCase()] === 'number') {
+      return data.rates[to.toUpperCase()];
+    }
+    return null;
+  } catch (e) {
+    return null;
+  }
+}
+function convertAllAmounts(rate) {
+  const r = (n) => Math.round(Number(n || 0) * rate * 100) / 100;
+  config.income = r(config.income);
+  config.emergencyFundGoal = r(config.emergencyFundGoal);
+  config.monthlyTarget = r(config.monthlyTarget);
+  config.fixedCosts.forEach(f => { f.amount = r(f.amount); });
+  config.debts.forEach(d => { d.monthlyPayment = r(d.monthlyPayment); });
+  config.goals.forEach(g => { g.targetAmount = r(g.targetAmount); g.savedAmount = r(g.savedAmount); });
+  Object.keys(months).forEach(k => {
+    months[k].income = r(months[k].income);
+    months[k].entries.forEach(e => {
+      e.amount = r(e.amount);
+      (e.expenses || []).forEach(x => { x.amount = r(x.amount); });
+    });
+  });
+}
+async function handleCurrencyChange(rawValue) {
+  if (rawValue === '__other__') {
+    if (CURRENCY_OPTIONS.includes(config.currency)) config.currency = '';
+    renderContent(false);
+    return;
+  }
+  const newCurrency = (rawValue || '').trim().toUpperCase();
+  const oldCurrency = (config.currency || 'AED').toUpperCase();
+  if (!newCurrency || newCurrency === oldCurrency) { renderContent(false); return; }
+
+  showToast(`Fetching ${oldCurrency} → ${newCurrency} rate...`);
+  const rate = await fetchExchangeRate(oldCurrency, newCurrency);
+
+  if (rate === null) {
+    const labelOnly = confirm(`Couldn't fetch a live exchange rate for ${oldCurrency} to ${newCurrency} (check your internet connection). Switch the label to ${newCurrency} without converting any amounts?`);
+    if (labelOnly) {
+      config.currency = newCurrency;
+      markDirty();
+    }
+    renderContent(false);
+    return;
+  }
+
+  const proceed = confirm(`Convert everything from ${oldCurrency} to ${newCurrency} using today's rate (1 ${oldCurrency} = ${rate.toFixed(4)} ${newCurrency})? This updates every amount in your tracker: income, costs, debts, goals, and every logged month.`);
+  if (!proceed) { renderContent(false); return; }
+
+  convertAllAmounts(rate);
+  config.currency = newCurrency;
+  config.lastConversion = { from: oldCurrency, to: newCurrency, rate: rate.toFixed(4), date: todayISO() };
+  persist();
+  showToast(`✅ Converted to ${newCurrency} (1 ${oldCurrency} = ${rate.toFixed(4)} ${newCurrency})`);
+  renderContent(false);
+}
+
+// ---------------- Goals ----------------
+const GOAL_EMOJIS = ['✈️','🏝️','📷','💻','📱','🚗','💍','🏠','🎓','🎁','🎯'];
+const LOCATION_OPTIONS = ['Bank (ENBD)', 'Bank (EIB)', 'Cash', 'Other'];
+const CURRENCY_OPTIONS = ['AED', 'USD', 'PHP', 'EUR', 'GBP', 'SAR', 'INR'];
+
+function goalsHTML() {
+  if (!config.goals.length) {
+    return `
+    <div class="card" style="text-align:center; padding:40px 20px;">
+      <div style="font-size:40px; margin-bottom:10px;">🎯</div>
+      <div class="value small" style="margin-bottom:6px;">No goals yet</div>
+      <div class="note" style="margin-bottom:16px;">Save up for a trip, a gadget, anything you want, track it separately from your emergency fund.</div>
+      <button class="btn btn-primary" onclick="addGoal()">➕ Add your first goal</button>
+    </div>`;
+  }
+
+  const cards = config.goals.map(g => {
+    const pct = g.targetAmount > 0 ? Math.min((g.savedAmount / g.targetAmount) * 100, 100) : 0;
+    const remaining = Math.max(g.targetAmount - g.savedAmount, 0);
+    const done = g.targetAmount > 0 && g.savedAmount >= g.targetAmount;
+    return `
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
+        <div style="display:flex; gap:10px; align-items:flex-start; flex:1; min-width:220px;">
+          <select onchange="updateGoal('${g.id}','emoji',this.value)" style="width:56px; font-size:18px; text-align:center; padding:6px;">
+            ${GOAL_EMOJIS.map(em => `<option value="${em}" ${g.emoji===em?'selected':''}>${em}</option>`).join('')}
+          </select>
+          <div style="flex:1;">
+            <textarea class="wrap-input" rows="1" oninput="growOnInput(this)" onchange="updateGoal('${g.id}','name',this.value)"
+              style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(g.name)}</textarea>
+            ${(g.targetDate || g.location) ? `<div class="label" style="margin-top:2px;">${g.targetDate ? `Target: ${escapeAttr(g.targetDate)}` : ''}${g.targetDate && g.location ? ' · ' : ''}${g.location ? escapeAttr(g.location) : ''}</div>` : ''}
+          </div>
+        </div>
+        <button class="icon-btn" onclick="removeGoal('${g.id}')" title="Remove">🗑️</button>
+      </div>
+      <div class="grid grid-4" style="margin-top:10px;">
+        <div><div class="label">Target Amount</div><input type="number" value="${g.targetAmount}" onchange="updateGoal('${g.id}','targetAmount',this.value)"/></div>
+        <div><div class="label">Saved So Far</div><input type="number" value="${g.savedAmount}" onchange="updateGoal('${g.id}','savedAmount',this.value)"/></div>
+        <div>
+          <div class="label">Target Month</div>
+          <div style="position:relative;">
+            <input type="text" id="goalMonth-${g.id}" value="${g.targetDate||''}" placeholder="e.g. 2026-12" onchange="updateGoal('${g.id}','targetDate',this.value)" style="padding-right:42px;"/>
+            <button type="button" class="icon-btn" onclick="openMonthPicker('goalMonth-${g.id}')" title="Pick a month" style="position:absolute; right:2px; top:50%; transform:translateY(-50%); padding:6px 8px; font-size:16px;">📅</button>
+          </div>
+        </div>
+        <div>
+          <div class="label">Where Is This Kept?</div>
+          <select onchange="updateGoal('${g.id}','location',this.value)">
+            <option value="" ${g.location===''?'selected':''}>— select —</option>
+            ${LOCATION_OPTIONS.map(loc => `<option value="${loc}" ${g.location===loc?'selected':''}>${loc}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <div class="progress-bar"><div class="progress-fill" data-target="${pct}" style="background:${done?'var(--teal)':'var(--gold)'}"></div></div>
+        <div class="label" style="margin-top:4px; font-family:'JetBrains Mono'; text-transform:none;">
+          ${done ? `🎉 Fully funded!` : `${AED(g.savedAmount)} of ${AED(g.targetAmount)} · ${AED(remaining)} to go (${pct.toFixed(0)}%)`}
+        </div>
+      </div>
+      ${!done ? `
+      <div style="display:flex; gap:8px; margin-top:12px;">
+        <input type="number" id="contrib-${g.id}" placeholder="Add an amount" style="flex:1;"/>
+        <button class="btn btn-primary" onclick="addContribution('${g.id}')">➕ Add</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `
+  <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+    <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
+  </div>
+  <div class="grid" style="grid-template-columns:1fr;">${cards}</div>
+  <button class="add-link" onclick="addGoal()">➕ Add another goal</button>`;
+}
+function updateGoal(id, field, value) {
+  const g = config.goals.find(g => g.id === id);
+  if (!g) return;
+  g[field] = (field==='name'||field==='emoji'||field==='targetDate'||field==='location') ? value : Number(value);
+  markDirty(); renderContent(false);
+}
+function addContribution(id) {
+  const input = document.getElementById('contrib-' + id);
+  const amount = Number(input && input.value) || 0;
+  if (amount <= 0) return;
+  const g = config.goals.find(g => g.id === id);
+  if (!g) return;
+  g.savedAmount = Number(g.savedAmount) + amount;
+  markDirty(); renderContent(false);
+}
+function removeGoal(id) { config.goals = config.goals.filter(g => g.id !== id); markDirty(); renderContent(false); }
+function addGoal() {
+  config.goals.push({ id: uid(), name: 'New goal', emoji: '🎯', targetAmount: 5000, savedAmount: 0, targetDate: '', location: '' });
+  markDirty(); renderContent(false);
+}
+
+// ---------------- Settings ----------------
+function settingsHTML() {
+  const fixedRows = config.fixedCosts.map(f => `
+    <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--panel-line); flex-wrap:wrap;">
+      <input type="text" value="${escapeAttr(f.name)}" onchange="updateFixed('${f.id}','name',this.value)" style="flex:1 1 160px;"/>
+      <input type="number" value="${f.amount}" onchange="updateFixed('${f.id}','amount',this.value)" style="flex:0 1 120px;"/>
+      <button class="icon-btn" onclick="removeFixed('${f.id}')">🗑️</button>
+    </div>`).join('');
+  const isPresetCurrency = CURRENCY_OPTIONS.includes(config.currency);
+
+  return `
+  <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
+    <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
+  </div>
+  <div class="card">
+    <div class="label">Currency</div>
+    <select onchange="handleCurrencyChange(this.value)" id="currencySelect">
+      ${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${config.currency===c?'selected':''}>${c}</option>`).join('')}
+      <option value="__other__" ${!isPresetCurrency?'selected':''}>Other</option>
+    </select>
+    ${!isPresetCurrency ? `<input type="text" id="customCurrencyInput" value="${escapeAttr(config.currency)}" placeholder="e.g. GBP" onchange="handleCurrencyChange(this.value)" style="margin-top:8px;"/>` : ''}
+    <div class="note" style="margin-top:6px;">Switching currency fetches a live exchange rate and converts every amount in your tracker, income, costs, debts, goals, everything. Needs an internet connection.</div>
+    ${config.lastConversion ? `<div class="note" style="margin-top:4px; font-family:'JetBrains Mono';">Last converted: ${escapeAttr(config.lastConversion.from)} → ${escapeAttr(config.lastConversion.to)} at ${config.lastConversion.rate} on ${escapeAttr(config.lastConversion.date)}</div>` : ''}
+  </div>
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="label" style="margin-bottom:0;">Monthly Income</div>
+      <button class="icon-btn" onclick="togglePrivacy()" title="${privacyMode ? 'Show amount' : 'Hide amount'}" style="padding:6px 8px; font-size:15px;">${privacyMode ? '🙈' : '👁️'}</button>
+    </div>
+    <input type="${privacyMode ? 'password' : 'number'}" value="${config.income}" onchange="updateConfig('income',this.value)" style="margin-top:6px;"/>
+  </div>
+  <div class="card">
+    <div class="label">Savings Target</div>
+    <div class="note" style="margin-bottom:8px;">Set how much you want to save each month over in the Savings tab, it drives the Dashboard's plan too.</div>
+    <input type="number" value="${config.monthlyTarget}" onchange="updateConfig('monthlyTarget',this.value)"/>
+  </div>
+  <div class="card">
+    <div class="label">Fixed Monthly Costs</div>
+    <div>${fixedRows}</div>
+    <button class="add-link" onclick="addFixed()">➕ Add fixed cost</button>
+  </div>
+  <div class="card">
+    <div class="label">Manage Months</div>
+    <div class="note" style="margin-bottom:10px;">Delete a month's log if you added it by mistake or no longer need it.</div>
+    ${Object.keys(months).sort().map(k => `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--panel-line);">
+        <div>${escapeHtml(months[k].label || keyToLabel(k))}</div>
+        <button class="icon-btn" onclick="deleteMonth('${k}')" title="Delete this month">🗑️</button>
+      </div>`).join('')}
+  </div>
+  <div class="card">
+    <div class="label">Export</div>
+    <div class="note" style="margin-bottom:10px;">Download everything, income, fixed costs, debts, monthly logs, expenses, and goals, as one Excel workbook.</div>
+    <button class="btn btn-primary" onclick="exportToExcel()">⬇️ Export to Excel</button>
+  </div>
+  <div class="card">
+    <div class="label">Reset</div>
+    <div class="note" style="margin-bottom:10px;">Clears everything and starts fresh from zero, income, costs, debts, months, goals, all blank.</div>
+    <button class="btn btn-danger" onclick="resetAll()">Reset to defaults</button>
+  </div>`;
+}
+function updateFixed(id, field, value) {
+  const f = config.fixedCosts.find(f => f.id === id);
+  if (!f) return;
+  f[field] = field==='name' ? value : Number(value);
+  markDirty(); renderContent(false);
+}
+function removeFixed(id) { config.fixedCosts = config.fixedCosts.filter(f => f.id !== id); markDirty(); renderContent(false); }
+function addFixed() { config.fixedCosts.push({ id: uid(), name:'New fixed cost', amount:0 }); markDirty(); renderContent(false); }
+function deleteMonth(key) {
+  const keys = Object.keys(months);
+  if (keys.length <= 1) { alert("You need at least one month, add another before deleting this one."); return; }
+  const label = months[key] ? (months[key].label || keyToLabel(key)) : key;
+  if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+  delete months[key];
+  if (activeMonthKey === key) activeMonthKey = Object.keys(months).sort().slice(-1)[0];
+  markDirty(); renderContent(false);
+}
+function exportToExcel() {
+  if (typeof XLSX === 'undefined') { alert("The Excel export library didn't load, check your internet connection and try again."); return; }
+  const wb = XLSX.utils.book_new();
+
+  const summary = [
+    { Field: 'Currency', Value: config.currency },
+    { Field: 'Monthly Income', Value: config.income },
+    { Field: 'Emergency Fund Goal', Value: config.emergencyFundGoal },
+    { Field: 'Monthly Savings Target', Value: config.monthlyTarget },
+    { Field: 'Where Savings Is Kept', Value: config.savingsLocation || '' },
+    { Field: 'Last Currency Conversion', Value: config.lastConversion ? `${config.lastConversion.from} → ${config.lastConversion.to} at ${config.lastConversion.rate} on ${config.lastConversion.date}` : '' },
+  ];
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summary), 'Summary');
+
+  const fixedRows = config.fixedCosts.map(f => ({ Category: f.name, Amount: f.amount }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(fixedRows), 'Fixed Costs');
+
+  const debtRows = config.debts.map(d => {
+    const { totalMade, remaining, paidAmount, totalOwed, remainingAmount } = debtProgress(d);
+    return {
+      Name: d.name, Type: d.type, 'Monthly Payment': d.monthlyPayment, 'Term (months)': d.termMonths,
+      'Starting Count': d.paymentsMade, 'Marked Paid In App': (d.paidMonths||[]).length,
+      'Months Paid': totalMade, 'Months Remaining': remaining, 'Paid Months': (d.paidMonths||[]).join(', '),
+      [`${config.currency||'AED'} Paid`]: Math.round(paidAmount), [`${config.currency||'AED'} Total Owed`]: totalOwed, [`${config.currency||'AED'} Remaining`]: remainingAmount !== null ? Math.round(remainingAmount) : '',
+    };
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(debtRows), 'Debts');
+
+  const logRows = [];
+  const expenseRows = [];
+  Object.keys(months).sort().forEach(k => {
+    const m = months[k];
+    m.entries.forEach(e => {
+      const debt = e.linkedDebtId ? config.debts.find(d => d.id === e.linkedDebtId) : null;
+      logRows.push({
+        Month: m.label || keyToLabel(k), Category: e.category, Remarks: e.remarks,
+        Amount: e.amount, Status: e.status, 'Linked Commitment': debt ? debt.name : '',
+      });
+      (e.expenses||[]).forEach(x => {
+        expenseRows.push({ Month: m.label || keyToLabel(k), Category: e.category, Date: x.date, Description: x.description, Amount: x.amount });
+      });
+    });
+  });
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(logRows), 'Monthly Log');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(expenseRows.length ? expenseRows : [{ Month:'', Category:'', Date:'', Description:'', Amount:'' }]), 'Expenses');
+
+  const goalRows = config.goals.map(g => ({
+    Goal: g.name, 'Target Amount': g.targetAmount, 'Saved So Far': g.savedAmount, 'Target Month': g.targetDate || '', 'Where Kept': g.location || '',
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(goalRows.length ? goalRows : [{ Goal:'', 'Target Amount':'', 'Saved So Far':'', 'Target Month':'', 'Where Kept':'' }]), 'Goals');
+
+  XLSX.writeFile(wb, `Ace_Budget_Export_${todayISO()}.xlsx`);
+}
+function resetAll() {
+  if (!confirm('Reset everything to a blank slate? This cannot be undone.')) return;
+  config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  months = JSON.parse(JSON.stringify(DEFAULT_MONTHS));
+  activeMonthKey = Object.keys(months).sort().slice(-1)[0];
+  persist();
+  showToast('🔄 Reset to defaults');
+  renderTabs(); renderContent(true);
+}
+
+function escapeAttr(str) { return String(str??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function escapeHtml(str) { return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ---------------- init ----------------
+initTheme();
+updateLiveClock();
+renderTabs();
+renderContent();
+</script>
+</body>
+</html>
