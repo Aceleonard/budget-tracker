@@ -306,6 +306,9 @@ let months = load('aceBudgetMonths', DEFAULT_MONTHS);
 if (!config.goals) config.goals = [];
 if (config.savingsLocation === undefined) config.savingsLocation = '';
 if (!config.currency) config.currency = 'AED';
+if (config.income > 0) {
+  Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
+}
 let activeTab = 'dashboard';
 let activeMonthKey = Object.keys(months).sort().slice(-1)[0];
 let chartInstance = null;
@@ -391,9 +394,13 @@ function applyCloudRow(row) {
   if (!config.goals) config.goals = [];
   if (config.savingsLocation === undefined) config.savingsLocation = '';
   if (!config.currency) config.currency = 'AED';
+  if (config.income > 0) {
+    Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
+  }
   activeMonthKey = Object.keys(months).sort().slice(-1)[0];
   lastSyncedUpdatedAt = row.updated_at;
   persist();
+  scheduleCloudPush();
   renderTabs();
   renderContent(true);
 }
@@ -819,18 +826,22 @@ function dashboardHTML() {
   const keys = Object.keys(months).sort();
   const currentKey = keys[keys.length-1];
   const current = months[currentKey];
-  const fixedTotal = config.fixedCosts.reduce((s,f)=>s+Number(f.amount),0);
-  const activeDebts = config.debts.filter(d => { const { remaining } = debtProgress(d); return remaining === null || remaining > 0; });
-  const debtTotal = activeDebts.reduce((s,d)=>s+Number(d.monthlyPayment),0);
-  const available = config.income - fixedTotal - debtTotal;
-  const recSavings = Math.max(Math.min(Math.round(config.monthlyTarget), available), 0);
-  const recExtras = available - recSavings;
-  const overcommitted = config.monthlyTarget > available;
-  const currentTotal = current.entries.reduce((s,e)=>s+Number(e.amount),0);
-  const currentRemaining = current.income - currentTotal;
+  const income = Number(current.income) || 0;
   const savEntry = current.entries.find(e=>e.category==='Savings');
-  const savingsRate = (savEntry && current.income > 0) ? (Number(savEntry.amount)/current.income*100) : 0;
-  const inc = incomeStat(config.income);
+  const extrasEntry = current.entries.find(e=>e.category==='Extras');
+  const savingsAmt = savEntry ? Number(savEntry.amount) : 0;
+  const extrasAmt = extrasEntry ? Number(extrasEntry.amount) : 0;
+  const debtTotal = current.entries.filter(e => e.linkedDebtId).reduce((s,e)=>s+Number(e.amount),0);
+  const fixedTotal = current.entries.reduce((s,e) => {
+    if (e.linkedDebtId || e === savEntry || e === extrasEntry) return s;
+    return s + Number(e.amount);
+  }, 0);
+  const leftAfterBills = income - fixedTotal - debtTotal;
+  const overcommitted = savingsAmt > leftAfterBills;
+  const currentTotal = current.entries.reduce((s,e)=>s+Number(e.amount),0);
+  const currentRemaining = income - currentTotal;
+  const savingsRate = income > 0 ? (savingsAmt/income*100) : 0;
+  const inc = incomeStat(income);
   const paidEntries = current.entries.filter(e => e.status === 'Paid');
   const pendingEntries = current.entries.filter(e => e.status === 'Pending');
   const unmarkedEntries = current.entries.filter(e => e.status !== 'Paid' && e.status !== 'Pending');
@@ -850,16 +861,16 @@ function dashboardHTML() {
   </div>
   <div class="grid grid-2">
     <div class="card">
-      <div class="label">💰 Where Your Income Goes</div>
+      <div class="label">💰 Where Your Income Goes — ${escapeAttr(current.label || keyToLabel(currentKey))}</div>
       <div style="margin-top:6px;">
-        <div class="flow-row"><span class="flow-label">Income</span><span>${AED(config.income)}</span></div>
-        <div class="flow-row"><span class="flow-label">− Fixed Costs</span><span style="color:var(--text-dim)">−${AED(fixedTotal)}</span></div>
-        <div class="flow-row"><span class="flow-label">− Active Commitments</span><span style="color:var(--gold)">−${AED(debtTotal)}</span></div>
-        <div class="flow-row total"><span class="flow-label">= Left after bills</span><span style="color:var(--teal)">${AED(available)}</span></div>
-        <div class="flow-row"><span class="flow-label">− Savings Target</span><span style="color:var(--teal)">−${AED(recSavings)}</span></div>
-        <div class="flow-row total"><span class="flow-label">= Flexible spending</span><span style="color:var(--gold)">${AED(recExtras)}</span></div>
+        <div class="flow-row"><span class="flow-label">Income</span><span>${AED(income)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Fixed Costs (logged)</span><span style="color:var(--text-dim)">−${AED(fixedTotal)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Active Commitments (logged)</span><span style="color:var(--gold)">−${AED(debtTotal)}</span></div>
+        <div class="flow-row total"><span class="flow-label">= Left after bills</span><span style="color:var(--teal)">${AED(leftAfterBills)}</span></div>
+        <div class="flow-row"><span class="flow-label">− Savings (logged)</span><span style="color:var(--teal)">−${AED(savingsAmt)}</span></div>
+        <div class="flow-row total"><span class="flow-label">= Remaining</span><span style="color:${currentRemaining>=0?'var(--gold)':'var(--rust)'}">${AED(currentRemaining)}</span></div>
       </div>
-      ${overcommitted ? `<div class="note" style="margin-top:8px; color:var(--rust);">Your savings target is more than you have left after bills, adjust it in the Savings tab.</div>` : `<div class="note" style="margin-top:8px;">Change your Savings Target in the Savings tab, this breakdown updates automatically.</div>`}
+      <div class="note" style="margin-top:8px;">This reflects what you've actually logged in Monthly Log for ${escapeAttr(current.label || keyToLabel(currentKey))}. ${overcommitted ? `You've logged more savings than you have left after bills, double check your entries.` : `Add or edit entries in Monthly Log and this updates automatically.`}</div>
     </div>
     <div class="card">
       <div class="label">${current.label} snapshot</div>
@@ -1416,6 +1427,9 @@ function renderSavingsChart() {
 }
 function updateConfig(field, value) {
   config[field] = Number(value);
+  if (field === 'income') {
+    Object.keys(months).forEach(k => { months[k].income = Number(value); });
+  }
   markDirty(); renderContent(false);
 }
 function updateConfigText(field, value) {
