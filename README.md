@@ -2,6 +2,21 @@
 
 A single-file budget tracker. No build step, no npm install, no server required.
 
+**Live site:** https://aceleonard.github.io/budget-tracker/
+
+## Sign in and cross-device sync
+
+The tracker is backed by a free Supabase project. Sign in (or create an account) once, and your data
+syncs automatically across every device/browser you log into:
+
+- Every change auto-saves to the cloud a moment after you make it (and instantly whenever you hit **Save**).
+- Open the tracker on another device and sign in with the same account, your latest data loads automatically.
+- Changes made on one device while another is open update the other live (no refresh needed).
+- If you sign up with a new account, Supabase sends a confirmation email, you'll need to click that link before you can sign in for the first time.
+
+If you ever see "email rate limit exceeded" while creating an account, it means several signups happened
+in a short window (Supabase's free-tier email sending is rate-limited) — wait a bit and try again.
+
 ## How to open it
 
 **Easiest:** double-click `budget-tracker.html`, it opens in your default browser and works fully.

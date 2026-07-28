@@ -6,6 +6,7 @@
 <title>Ace's Route to Debt-Free</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -207,14 +208,43 @@
   .dp-day:hover { background: var(--bg-soft); }
   .dp-selected { background: var(--gold) !important; color: var(--road) !important; font-weight:700; }
   .dp-today { box-shadow: inset 0 0 0 1px var(--gold); }
+
+  .auth-gate { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .auth-card { max-width:360px; width:100%; }
+  .auth-tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .account-box { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--text-dim); }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div id="authLoading" style="min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:'Inter'; color:var(--text-dim);">Loading…</div>
+
+<div id="authGate" class="auth-gate" style="display:none;">
+  <div class="card auth-card">
+    <div class="brand" style="margin-bottom:4px;">Ace's <span>Route to Debt-Free</span></div>
+    <div class="note" style="margin-bottom:16px;">Sign in to sync your budget across every device.</div>
+    <div class="auth-tabs">
+      <button type="button" class="tab-btn active" id="authTabSignin" onclick="setAuthMode('signin')" style="flex:1;">Sign In</button>
+      <button type="button" class="tab-btn" id="authTabSignup" onclick="setAuthMode('signup')" style="flex:1;">Create Account</button>
+    </div>
+    <div class="label">Email</div>
+    <input type="text" id="authEmail" placeholder="you@example.com" style="margin-bottom:10px;"/>
+    <div class="label">Password</div>
+    <input type="password" id="authPassword" placeholder="••••••••" style="margin-bottom:14px;"/>
+    <div id="authError" class="note" style="color:var(--rust); display:none; margin-bottom:10px;"></div>
+    <div id="authInfo" class="note" style="color:var(--teal); display:none; margin-bottom:10px;"></div>
+    <button class="btn btn-primary" style="width:100%;" id="authSubmitBtn" onclick="submitAuth()">Sign In</button>
+  </div>
+</div>
+
+<div class="wrap" id="appWrap" style="display:none;">
   <div class="topbar">
     <div class="brand">Ace's <span>Route to Debt-Free</span></div>
     <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
       <div id="liveClock" style="font-family:'JetBrains Mono'; font-size:12px; color:var(--text-dim);"></div>
+      <div class="account-box">
+        <span id="accountEmail"></span>
+        <button class="icon-btn" onclick="signOut()" title="Sign out">🚪</button>
+      </div>
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">🌙 Dark mode</button>
     </div>
   </div>
@@ -282,6 +312,16 @@ let chartInstance = null;
 let privacyMode = localStorage.getItem('aceBudgetPrivacy') === '1';
 let expandedEntryId = null;
 
+// ---------------- cloud sync (Supabase) ----------------
+const SUPABASE_URL = 'https://bxxnsfvkkijoexxzttfs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_DFaOBxp7kKXqmMRhaIRHeQ_K3Em8oot';
+let supabaseClient = null;
+let cloudUserId = null;
+let lastSyncedUpdatedAt = null;
+let pushTimer = null;
+let realtimeChannel = null;
+let authMode = 'signin';
+
 function load(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
@@ -304,6 +344,7 @@ function markDirty() {
   hasUnsavedChanges = true;
   const ok = persist();
   if (!ok) showToast("⚠️ Couldn't save, check your browser storage", true);
+  scheduleCloudPush();
 }
 function persist() {
   try {
@@ -319,6 +360,7 @@ function manualSave() {
   const ok = persist();
   showToast(ok ? '✅ All changes saved' : "⚠️ Couldn't save, try again", !ok);
   renderContent(false);
+  if (cloudUserId) { clearTimeout(pushTimer); pushToCloud(); }
 }
 function unsavedBadge() {
   return hasUnsavedChanges ? `<span style="color:var(--rust); font-size:12px; font-weight:600; align-self:center;">● unsaved changes</span>` : '';
@@ -326,6 +368,140 @@ function unsavedBadge() {
 window.addEventListener('beforeunload', function(e) {
   if (hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
 });
+
+function scheduleCloudPush() {
+  if (!cloudUserId) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(pushToCloud, 1200);
+}
+async function pushToCloud() {
+  if (!cloudUserId) return;
+  try {
+    const { data, error } = await supabaseClient
+      .from('budget_data')
+      .upsert({ user_id: cloudUserId, config, months }, { onConflict: 'user_id' })
+      .select('updated_at')
+      .single();
+    if (!error && data) lastSyncedUpdatedAt = data.updated_at;
+  } catch (e) { /* offline, next change will retry */ }
+}
+function applyCloudRow(row) {
+  if (row.config && Object.keys(row.config).length) config = row.config;
+  if (row.months && Object.keys(row.months).length) months = row.months;
+  if (!config.goals) config.goals = [];
+  if (config.savingsLocation === undefined) config.savingsLocation = '';
+  if (!config.currency) config.currency = 'AED';
+  activeMonthKey = Object.keys(months).sort().slice(-1)[0];
+  lastSyncedUpdatedAt = row.updated_at;
+  persist();
+  renderTabs();
+  renderContent(true);
+}
+function subscribeRealtime() {
+  if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+  realtimeChannel = supabaseClient
+    .channel('budget_data_' + cloudUserId)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'budget_data', filter: `user_id=eq.${cloudUserId}` }, (payload) => {
+      const row = payload.new;
+      if (!row || row.updated_at === lastSyncedUpdatedAt) return;
+      applyCloudRow(row);
+      showToast('🔄 Synced from another device');
+    })
+    .subscribe();
+}
+function updateAccountLabel() {
+  const el = document.getElementById('accountEmail');
+  if (el) el.textContent = cloudUserEmail || '';
+}
+function showAuthGate() {
+  document.getElementById('authLoading').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'none';
+  document.getElementById('authGate').style.display = 'flex';
+}
+function hideAuthGate() {
+  document.getElementById('authLoading').style.display = 'none';
+  document.getElementById('authGate').style.display = 'none';
+  document.getElementById('appWrap').style.display = 'block';
+}
+let cloudUserEmail = '';
+async function onAuthed(user) {
+  cloudUserId = user.id;
+  cloudUserEmail = user.email || '';
+  hideAuthGate();
+  updateAccountLabel();
+  try {
+    const { data, error } = await supabaseClient.from('budget_data').select('*').eq('user_id', cloudUserId).maybeSingle();
+    if (error) throw error;
+    if (data) {
+      applyCloudRow(data);
+    } else {
+      const { data: inserted, error: insErr } = await supabaseClient
+        .from('budget_data').insert({ user_id: cloudUserId, config, months }).select('updated_at').single();
+      if (insErr) throw insErr;
+      lastSyncedUpdatedAt = inserted.updated_at;
+      renderTabs();
+      renderContent();
+    }
+    showToast('✅ Synced');
+  } catch (e) {
+    showToast("⚠️ Couldn't reach the server, working offline", true);
+    renderTabs();
+    renderContent();
+  }
+  subscribeRealtime();
+}
+function initAuth() {
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (session && session.user) {
+      if (cloudUserId !== session.user.id) onAuthed(session.user);
+    } else {
+      cloudUserId = null;
+      cloudUserEmail = '';
+      if (realtimeChannel) { supabaseClient.removeChannel(realtimeChannel); realtimeChannel = null; }
+      showAuthGate();
+    }
+  });
+}
+function setAuthMode(mode) {
+  authMode = mode;
+  document.getElementById('authTabSignin').classList.toggle('active', mode === 'signin');
+  document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
+  document.getElementById('authSubmitBtn').textContent = mode === 'signin' ? 'Sign In' : 'Create Account';
+  document.getElementById('authError').style.display = 'none';
+  document.getElementById('authInfo').style.display = 'none';
+}
+async function submitAuth() {
+  const email = document.getElementById('authEmail').value.trim();
+  const password = document.getElementById('authPassword').value;
+  const errEl = document.getElementById('authError');
+  const infoEl = document.getElementById('authInfo');
+  errEl.style.display = 'none';
+  infoEl.style.display = 'none';
+  if (!email || !password) { errEl.textContent = 'Enter an email and password.'; errEl.style.display = 'block'; return; }
+  const btn = document.getElementById('authSubmitBtn');
+  btn.disabled = true;
+  try {
+    if (authMode === 'signin') {
+      const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+    } else {
+      const { data, error } = await supabaseClient.auth.signUp({ email, password });
+      if (error) { errEl.textContent = error.message; errEl.style.display = 'block'; }
+      else if (!data.session) {
+        setAuthMode('signin');
+        infoEl.textContent = 'Account created. Check your email to confirm it, then sign in.';
+        infoEl.style.display = 'block';
+      }
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+async function signOut() {
+  if (hasUnsavedChanges) { clearTimeout(pushTimer); await pushToCloud(); }
+  await supabaseClient.auth.signOut();
+}
 
 // ---------------- theme ----------------
 function initTheme() {
@@ -1546,6 +1722,7 @@ function resetAll() {
   persist();
   showToast('🔄 Reset to defaults');
   renderTabs(); renderContent(true);
+  if (cloudUserId) { clearTimeout(pushTimer); pushToCloud(); }
 }
 
 function escapeAttr(str) { return String(str??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
@@ -1554,8 +1731,7 @@ function escapeHtml(str) { return String(str??'').replace(/&/g,'&amp;').replace(
 // ---------------- init ----------------
 initTheme();
 updateLiveClock();
-renderTabs();
-renderContent();
+initAuth();
 </script>
 </body>
 </html>
