@@ -137,14 +137,31 @@
   .paid-pill.paid { background: rgba(62,156,135,0.18); color: var(--teal); }
   .paid-pill.pending { background: rgba(217,105,74,0.15); color: var(--rust); }
 
-  .entry-item { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; padding:14px 0; border-bottom:1px solid var(--panel-line); }
-  .entry-item:last-child { border-bottom:none; }
-  .entry-main { flex:1 1 280px; min-width:220px; }
-  .entry-cat { font-weight:600; margin-bottom:6px; }
-  .entry-remarks { font-size:13px; color: var(--text-dim); background: transparent; border-style: dashed; }
-  .entry-meta { display:flex; gap:10px; flex-wrap:wrap; flex:0 0 auto; }
   .amt { font-family:'JetBrains Mono'; }
-  @media (max-width: 600px) { .entry-meta { width:100%; } .entry-meta > div { flex:1 1 100px; } }
+
+  .drag-handle { cursor:grab; color:var(--text-dim); padding:0 2px; user-select:none; font-size:15px; flex:0 0 auto; touch-action:none; }
+  .drag-handle:active { cursor:grabbing; }
+  .drag-over { outline:2px dashed var(--gold); outline-offset:-2px; border-radius:8px; }
+
+  .log-row { display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid var(--panel-line); flex-wrap:wrap; }
+  .log-row:last-child { border-bottom:none; }
+  .log-cat { flex:2 1 140px; min-width:0; }
+  .log-amt { flex:0 0 92px; min-width:76px; }
+  .log-status { flex:0 0 96px; min-width:84px; }
+  .log-link-toggle { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-dim); flex:0 0 auto; cursor:pointer; white-space:nowrap; }
+  .log-link-toggle input { width:auto; }
+  .log-link-select { flex:1 1 150px; min-width:120px; }
+  .log-details { padding:2px 0 10px 26px; }
+  @media (max-width: 700px) {
+    .log-cat { flex:1 1 100%; order:1; }
+    .log-amt { order:2; }
+    .log-status { order:3; }
+    .log-link-toggle { order:4; }
+    .log-link-select { order:5; flex:1 1 100%; }
+  }
+
+  .fixed-row { display:flex; gap:10px; align-items:center; padding:8px 2px; border-bottom:1px solid var(--panel-line); flex-wrap:wrap; }
+  .fixed-row:last-child { border-bottom:none; }
 
   .route { border-radius: 20px; padding: 24px; margin-bottom: 20px; background: linear-gradient(180deg, var(--road) 0%, #0A0F1C 100%); box-shadow: var(--shadow); position: relative; overflow:hidden;}
   :root[data-theme="light"] .route { background: linear-gradient(180deg, #3A3222 0%, #2B2417 100%); }
@@ -638,7 +655,7 @@ function computeSpendingInsights() {
 
 function buildTemplateEntries() {
   const entries = [];
-  config.fixedCosts.forEach(f => entries.push({ id: uid(), category: f.name, amount: f.amount, status:'', remarks:'', linkedDebtId: null, expenses: [] }));
+  config.fixedCosts.forEach(f => entries.push({ id: uid(), category: f.name, amount: f.amount, status:'', remarks:'', linkedDebtId: null, linkedFixedCostId: f.id, expenses: [] }));
   config.debts.forEach(d => {
     const { remaining } = debtProgress(d);
     if (remaining === null || remaining > 0) entries.push({ id: uid(), category: d.name, amount: d.monthlyPayment, status:'', remarks:'', linkedDebtId: d.id, expenses: [] });
@@ -1110,47 +1127,43 @@ function logHTML() {
   const inc = incomeStat(month.income);
 
   const rows = month.entries.map(e => {
-    const debt = e.linkedDebtId ? config.debts.find(d => d.id === e.linkedDebtId) : null;
     const expenses = e.expenses || [];
     const isExpanded = expandedEntryId === e.id;
+    const hasDetails = !!e.remarks || expenses.length > 0;
     return `
-    <div class="entry-item">
-      <div class="entry-main">
-        <textarea class="wrap-input entry-cat" rows="1" oninput="growOnInput(this)" onchange="updateEntry('${e.id}','category',this.value)">${escapeHtml(e.category)}</textarea>
-        <textarea class="wrap-input entry-remarks" rows="1" oninput="growOnInput(this)" onchange="updateEntry('${e.id}','remarks',this.value)" placeholder="Remarks (optional)">${escapeHtml(e.remarks)}</textarea>
-        ${debt ? `<div class="label" style="margin-top:4px; color:var(--gold);">🔗 linked to ${escapeAttr(debt.name)}</div>` : ''}
-        ${expenses.length ? `<button class="add-link" style="margin-top:6px;" onclick="toggleExpenseList('${e.id}')">🧾 ${expenses.length} expense${expenses.length>1?'s':''} logged ${isExpanded?'▲':'▼'}</button>` : ''}
-        ${isExpanded ? `
-          <div style="margin-top:8px; border-left:2px solid var(--panel-line); padding-left:10px;">
-            ${expenses.map(x => `
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;">
-                <div style="color:var(--text-dim); font-family:'JetBrains Mono'; min-width:80px;">${x.date}</div>
-                <div style="flex:1;">${escapeHtml(x.description)}</div>
-                <div class="amt">${AED(x.amount)}</div>
-                <button class="icon-btn" onclick="removeExpense('${e.id}','${x.id}')" title="Remove">🗑️</button>
-              </div>`).join('')}
-          </div>` : ''}
-      </div>
-      <div class="entry-meta">
-        <div style="width:110px;"><div class="label">Amount</div><input type="number" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)"/></div>
-        <div style="width:110px;">
-          <div class="label">Status</div>
-          <select onchange="updateEntry('${e.id}','status',this.value)">
-            <option value="" ${e.status===''?'selected':''}>—</option>
-            <option value="Paid" ${e.status==='Paid'?'selected':''}>Paid</option>
-            <option value="Pending" ${e.status==='Pending'?'selected':''}>Pending</option>
-          </select>
-        </div>
-        <div style="flex:1 1 200px; min-width:200px;">
-          <div class="label">Linked commitment</div>
-          <select onchange="updateEntry('${e.id}','linkedDebtId',this.value)" style="width:100%;">
-            <option value="">— none —</option>
-            ${config.debts.map(d => `<option value="${d.id}" ${e.linkedDebtId===d.id?'selected':''}>${escapeAttr(d.name)}</option>`).join('')}
-          </select>
-        </div>
-        <button class="icon-btn" onclick="removeEntry('${e.id}')" title="Remove row" style="align-self:flex-end;">🗑️</button>
-      </div>
-    </div>`;
+    <div class="log-row" data-entry-row="${e.id}" ondragover="handleDragOver(event)" ondrop="handleEntryDrop(event,'${e.id}')" ondragleave="handleDragLeave(event)">
+      <span class="drag-handle" draggable="true" ondragstart="handleDragStart(event,'${e.id}')" ondragend="handleDragEnd(event)" title="Drag to reorder">⠿</span>
+      <input type="text" class="log-cat" value="${escapeAttr(e.category)}" onchange="updateEntry('${e.id}','category',this.value)"/>
+      <input type="number" class="log-amt" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)"/>
+      <select class="log-status" onchange="updateEntry('${e.id}','status',this.value)">
+        <option value="" ${e.status===''?'selected':''}>—</option>
+        <option value="Paid" ${e.status==='Paid'?'selected':''}>Paid</option>
+        <option value="Pending" ${e.status==='Pending'?'selected':''}>Pending</option>
+      </select>
+      <label class="log-link-toggle" title="Link to a commitment">
+        <input type="checkbox" ${e.linkedDebtId ? 'checked' : ''} onchange="toggleEntryLink('${e.id}', this.checked)"/> 🔗
+      </label>
+      ${e.linkedDebtId ? `
+      <select class="log-link-select" onchange="updateEntry('${e.id}','linkedDebtId',this.value)">
+        ${config.debts.map(d => `<option value="${d.id}" ${e.linkedDebtId===d.id?'selected':''}>${escapeAttr(d.name)}</option>`).join('')}
+      </select>` : ''}
+      <button class="icon-btn" onclick="toggleExpenseList('${e.id}')" title="Remarks / expenses">📝${hasDetails ? ' •' : ''}</button>
+      <button class="icon-btn" onclick="removeEntry('${e.id}')" title="Remove row">🗑️</button>
+    </div>
+    ${isExpanded ? `
+    <div class="log-details">
+      <textarea class="wrap-input entry-remarks" rows="1" oninput="growOnInput(this)" onchange="updateEntry('${e.id}','remarks',this.value)" placeholder="Remarks (optional)">${escapeHtml(e.remarks)}</textarea>
+      ${expenses.length ? `
+      <div style="margin-top:6px; border-left:2px solid var(--panel-line); padding-left:10px;">
+        ${expenses.map(x => `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;">
+            <div style="color:var(--text-dim); font-family:'JetBrains Mono'; min-width:80px;">${x.date}</div>
+            <div style="flex:1;">${escapeHtml(x.description)}</div>
+            <div class="amt">${AED(x.amount)}</div>
+            <button class="icon-btn" onclick="removeExpense('${e.id}','${x.id}')" title="Remove">🗑️</button>
+          </div>`).join('')}
+      </div>` : ''}
+    </div>` : ''}`;
   }).join('');
 
   return `
@@ -1243,6 +1256,77 @@ function removeEntry(id) {
   if (entry && entry.linkedDebtId) removeMonthFromDebt(entry.linkedDebtId, activeMonthKey);
   month.entries = month.entries.filter(e => e.id !== id);
   markDirty(); renderContent(false);
+}
+function toggleEntryLink(id, checked) {
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === id);
+  if (!entry) return;
+  if (checked) {
+    if (entry.linkedDebtId) return;
+    const firstDebt = config.debts[0];
+    if (!firstDebt) return;
+    entry.linkedDebtId = firstDebt.id;
+    syncDebtForEntry(entry);
+  } else {
+    if (entry.linkedDebtId) removeMonthFromDebt(entry.linkedDebtId, activeMonthKey);
+    entry.linkedDebtId = null;
+  }
+  markDirty(); renderContent(false);
+}
+
+// ---------------- drag to reorder ----------------
+let dragEntryId = null;
+function handleDragStart(e, id) {
+  dragEntryId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drag-over');
+}
+function handleDragLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function handleDragEnd(e) {
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragEntryId = null;
+}
+function handleEntryDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragEntryId || dragEntryId === targetId) { dragEntryId = null; return; }
+  const list = months[activeMonthKey].entries;
+  const fromIdx = list.findIndex(x => x.id === dragEntryId);
+  const toIdx = list.findIndex(x => x.id === targetId);
+  dragEntryId = null;
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [moved] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, moved);
+  markDirty(); renderContent(false);
+}
+
+let dragFixedId = null;
+function handleFixedDragStart(e, id) {
+  dragFixedId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+}
+function handleFixedDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!dragFixedId || dragFixedId === targetId) { dragFixedId = null; return; }
+  const list = config.fixedCosts;
+  const fromIdx = list.findIndex(x => x.id === dragFixedId);
+  const toIdx = list.findIndex(x => x.id === targetId);
+  dragFixedId = null;
+  if (fromIdx === -1 || toIdx === -1) return;
+  const [moved] = list.splice(fromIdx, 1);
+  list.splice(toIdx, 0, moved);
+  markDirty(); renderContent(false);
+}
+function handleFixedDragEnd(e) {
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  dragFixedId = null;
 }
 function addRow() {
   months[activeMonthKey].entries.push({ id: uid(), category:'New item', amount:0, status:'', remarks:'', linkedDebtId: null, expenses: [] });
@@ -1611,7 +1695,8 @@ function addGoal() {
 // ---------------- Settings ----------------
 function settingsHTML() {
   const fixedRows = config.fixedCosts.map(f => `
-    <div style="display:flex; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--panel-line); flex-wrap:wrap;">
+    <div class="fixed-row" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleFixedDrop(event,'${f.id}')">
+      <span class="drag-handle" draggable="true" ondragstart="handleFixedDragStart(event,'${f.id}')" ondragend="handleFixedDragEnd(event)" title="Drag to reorder">⠿</span>
       <input type="text" value="${escapeAttr(f.name)}" onchange="updateFixed('${f.id}','name',this.value)" style="flex:1 1 160px;"/>
       <input type="number" value="${f.amount}" onchange="updateFixed('${f.id}','amount',this.value)" style="flex:0 1 120px;"/>
       <button class="icon-btn" onclick="removeFixed('${f.id}')">🗑️</button>
@@ -1673,6 +1758,11 @@ function updateFixed(id, field, value) {
   const f = config.fixedCosts.find(f => f.id === id);
   if (!f) return;
   f[field] = field==='name' ? value : Number(value);
+  if (field === 'amount') {
+    Object.keys(months).forEach(k => {
+      months[k].entries.forEach(e => { if (e.linkedFixedCostId === id && !e.amount) e.amount = f.amount; });
+    });
+  }
   markDirty(); renderContent(false);
 }
 function removeFixed(id) { config.fixedCosts = config.fixedCosts.filter(f => f.id !== id); markDirty(); renderContent(false); }
