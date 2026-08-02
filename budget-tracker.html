@@ -1168,7 +1168,7 @@ function logHTML() {
     <div class="log-row" data-entry-row="${e.id}" ondragover="handleDragOver(event)" ondrop="handleEntryDrop(event,'${e.id}')" ondragleave="handleDragLeave(event)">
       <span class="drag-handle" draggable="true" ondragstart="handleDragStart(event,'${e.id}')" ondragend="handleDragEnd(event)" title="Drag to reorder">⠿</span>
       <input type="text" class="log-cat" value="${escapeAttr(e.category)}" onchange="updateEntry('${e.id}','category',this.value)"/>
-      <input type="number" class="log-amt" value="${e.amount}" onchange="updateEntry('${e.id}','amount',this.value)"/>
+      <input type="number" class="log-amt" value="${e.amount}" oninput="liveUpdateLogTotals()" onchange="updateEntry('${e.id}','amount',this.value)"/>
       <select class="log-status" onchange="updateEntry('${e.id}','status',this.value)">
         <option value="" ${e.status===''?'selected':''}>—</option>
         <option value="Paid" ${e.status==='Paid'?'selected':''}>Paid</option>
@@ -1245,9 +1245,9 @@ function logHTML() {
       </div>
       <div class="value" ${inc.attrs}>${inc.text}</div>
     </div>
-    <div class="card"><div class="label">Paid So Far</div><div class="value" style="color:var(--teal)" data-num="${paidTotal}" data-prefix="${config.currency || 'AED'} ">${AED(paidTotal)}</div></div>
-    <div class="card"><div class="label">Still Pending</div><div class="value" style="color:var(--rust)" data-num="${pendingTotal}" data-prefix="${config.currency || 'AED'} ">${AED(pendingTotal)}</div></div>
-    <div class="card"><div class="label">Remaining</div><div class="value" style="color:${remaining>=0?'var(--teal)':'var(--rust)'}" data-num="${remaining}" data-prefix="${config.currency || 'AED'} ">${AED(remaining)}</div></div>
+    <div class="card"><div class="label">Paid So Far</div><div class="value" id="logPaidTotal" style="color:var(--teal)" data-num="${paidTotal}" data-prefix="${config.currency || 'AED'} ">${AED(paidTotal)}</div></div>
+    <div class="card"><div class="label">Still Pending</div><div class="value" id="logPendingTotal" style="color:var(--rust)" data-num="${pendingTotal}" data-prefix="${config.currency || 'AED'} ">${AED(pendingTotal)}</div></div>
+    <div class="card"><div class="label">Remaining</div><div class="value" id="logRemaining" style="color:${remaining>=0?'var(--teal)':'var(--rust)'}" data-num="${remaining}" data-prefix="${config.currency || 'AED'} ">${AED(remaining)}</div></div>
   </div>`;
 }
 function setActiveMonth(k) { activeMonthKey = k; expandedEntryId = null; renderContent(); }
@@ -1266,6 +1266,29 @@ function removeMonthFromDebt(debtId, monthKey) {
   d.paidMonths = d.paidMonths || [];
   const idx = d.paidMonths.indexOf(monthKey);
   if (idx !== -1) d.paidMonths.splice(idx, 1);
+}
+function liveUpdateLogTotals() {
+  const remEl = document.getElementById('logRemaining');
+  const paidEl = document.getElementById('logPaidTotal');
+  const pendEl = document.getElementById('logPendingTotal');
+  if (!remEl) return;
+  let total = 0, paidTotal = 0, pendingTotal = 0;
+  document.querySelectorAll('#content .log-row').forEach(row => {
+    const amt = Number(row.querySelector('.log-amt').value) || 0;
+    const status = row.querySelector('.log-status').value;
+    total += amt;
+    if (status === 'Paid') paidTotal += amt;
+    else if (status === 'Pending') pendingTotal += amt;
+  });
+  const month = months[activeMonthKey];
+  const income = Number(month.income) || 0;
+  const remaining = income - total;
+  const cur = config.currency || 'AED';
+  const fmt = (n) => `${cur} ${Math.round(n).toLocaleString('en-US')}`;
+  remEl.textContent = fmt(remaining);
+  remEl.style.color = remaining >= 0 ? 'var(--teal)' : 'var(--rust)';
+  if (paidEl) paidEl.textContent = fmt(paidTotal);
+  if (pendEl) pendEl.textContent = fmt(pendingTotal);
 }
 function updateEntry(id, field, value) {
   const month = months[activeMonthKey];
