@@ -2,8 +2,15 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Ace's Route to Debt-Free</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Debt-Free" />
+<meta name="theme-color" content="#141B2E" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -325,10 +332,37 @@ function normalizeConfigAndMonths() {
   if (config.income > 0) {
     Object.keys(months).forEach(k => { if (!months[k].income) months[k].income = config.income; });
   }
+  // Entries created before linkedDebtId/linkedFixedCostId existed (or added manually) never got
+  // linked. Auto-link by exact category-name match, once, so existing data heals itself.
+  Object.keys(months).forEach(k => {
+    const entries = months[k].entries;
+    const linkedDebtIds = new Set(entries.filter(e => e.linkedDebtId).map(e => e.linkedDebtId));
+    const linkedFixedIds = new Set(entries.filter(e => e.linkedFixedCostId).map(e => e.linkedFixedCostId));
+    entries.forEach(e => {
+      if (e.linkedDebtId || e.linkedFixedCostId) return;
+      const matchDebt = config.debts.find(d => d.name === e.category && !linkedDebtIds.has(d.id));
+      if (matchDebt) {
+        e.linkedDebtId = matchDebt.id;
+        linkedDebtIds.add(matchDebt.id);
+        matchDebt.paidMonths = matchDebt.paidMonths || [];
+        if (e.status === 'Paid' && !matchDebt.paidMonths.includes(k)) matchDebt.paidMonths.push(k);
+        return;
+      }
+      const matchFixed = config.fixedCosts.find(f => f.name === e.category && !linkedFixedIds.has(f.id));
+      if (matchFixed) { e.linkedFixedCostId = matchFixed.id; linkedFixedIds.add(matchFixed.id); }
+    });
+  });
   config.debts.forEach(d => {
     if (d.monthlyPayment > 0) {
       Object.keys(months).forEach(k => {
         months[k].entries.forEach(e => { if (e.linkedDebtId === d.id && !e.amount) e.amount = d.monthlyPayment; });
+      });
+    }
+  });
+  config.fixedCosts.forEach(f => {
+    if (f.amount > 0) {
+      Object.keys(months).forEach(k => {
+        months[k].entries.forEach(e => { if (e.linkedFixedCostId === f.id && !e.amount) e.amount = f.amount; });
       });
     }
   });
