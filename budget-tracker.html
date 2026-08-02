@@ -91,9 +91,12 @@
 
   .card {
     background: var(--panel); border: 1px solid var(--panel-line); border-radius: 18px;
-    padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 16px;
+    padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px;
     animation: fadeInUp 0.45s ease both;
+    transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
+  .card:hover { border-color: var(--gold); box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
+  :root[data-theme="light"] .card:hover { box-shadow: 0 10px 24px rgba(43,36,23,0.14); }
   .btn:active, .tab-btn:active, .icon-btn:active { transform: scale(0.94); }
   .grid { display:grid; gap: 14px; }
   .grid-2 { grid-template-columns: repeat(2, 1fr); }
@@ -154,6 +157,7 @@
   .log-row:last-child { border-bottom:none; }
   .log-cat { flex:2 1 140px; min-width:0; }
   .log-amt { flex:0 0 92px; min-width:76px; }
+  .plan-pill { flex:0 0 auto; font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-dim); background:var(--bg-soft); border:1px solid var(--panel-line); padding:3px 7px; border-radius:999px; white-space:nowrap; }
   .log-status { flex:0 0 96px; min-width:84px; }
   .log-link-toggle { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-dim); flex:0 0 auto; cursor:pointer; white-space:nowrap; }
   .log-link-toggle input { width:auto; }
@@ -352,19 +356,16 @@ function normalizeConfigAndMonths() {
       if (matchFixed) { e.linkedFixedCostId = matchFixed.id; linkedFixedIds.add(matchFixed.id); }
     });
   });
-  config.debts.forEach(d => {
-    if (d.monthlyPayment > 0) {
-      Object.keys(months).forEach(k => {
-        months[k].entries.forEach(e => { if (e.linkedDebtId === d.id && !e.amount) e.amount = d.monthlyPayment; });
-      });
-    }
-  });
-  config.fixedCosts.forEach(f => {
-    if (f.amount > 0) {
-      Object.keys(months).forEach(k => {
-        months[k].entries.forEach(e => { if (e.linkedFixedCostId === f.id && !e.amount) e.amount = f.amount; });
-      });
-    }
+  // Migrate legacy `.amount` on linked entries into the override model: if the stored
+  // amount already matches the live Settings value, let it live-track from now on; if it
+  // genuinely differs, preserve it as an explicit per-month override so nothing changes silently.
+  Object.keys(months).forEach(k => {
+    months[k].entries.forEach(e => {
+      const linked = linkedItemAmount(e);
+      if (linked === null || e.amountOverride !== undefined) return;
+      const stored = Number(e.amount) || 0;
+      e.amountOverride = (stored !== linked) ? stored : null;
+    });
   });
 }
 
@@ -581,6 +582,7 @@ function toggleTheme() {
   localStorage.setItem('aceBudgetTheme', next);
   updateThemeBtn();
   if (activeTab === 'savings') renderSavingsChart();
+  if (activeTab === 'dashboard') renderDashboardBreakdownChart();
 }
 function updateThemeBtn() {
   const theme = document.documentElement.getAttribute('data-theme');
@@ -606,6 +608,38 @@ function nextMonthKey() {
   const [y,m] = last.split('-').map(Number); const d = new Date(y, m-1+1, 1);
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
+// ---------------- linked entry amounts (single source of truth) ----------------
+// A "linked" entry (tied to a fixed cost or debt via id) always reflects the live
+// Settings amount unless the user explicitly overrides it for that specific month.
+// This is what keeps Settings and Monthly Log permanently in sync with no manual
+// re-linking or push-sync code needed.
+function linkedItemAmount(entry) {
+  if (entry.linkedDebtId) {
+    const d = config.debts.find(d => d.id === entry.linkedDebtId);
+    return d ? Number(d.monthlyPayment) || 0 : 0;
+  }
+  if (entry.linkedFixedCostId) {
+    const f = config.fixedCosts.find(f => f.id === entry.linkedFixedCostId);
+    return f ? Number(f.amount) || 0 : 0;
+  }
+  return null;
+}
+function entryAmount(entry) {
+  const linked = linkedItemAmount(entry);
+  if (linked === null) return Number(entry.amount) || 0;
+  return (entry.amountOverride !== null && entry.amountOverride !== undefined) ? Number(entry.amountOverride) : linked;
+}
+function entryIsOverridden(entry) {
+  return linkedItemAmount(entry) !== null && entry.amountOverride !== null && entry.amountOverride !== undefined;
+}
+function adjustEntryAmount(entry, delta) {
+  if (linkedItemAmount(entry) !== null) {
+    entry.amountOverride = entryAmount(entry) + delta;
+  } else {
+    entry.amount = Number(entry.amount) + delta;
+  }
+}
+
 function debtProgress(d) {
   const baseline = Number(d.paymentsMade) || 0;
   const tracked = d.paidMonths || [];
@@ -621,7 +655,7 @@ function debtProgress(d) {
   tracked.forEach(mk => {
     const month = months[mk];
     const entry = month ? month.entries.find(e => e.linkedDebtId === d.id) : null;
-    paidAmount += entry ? Number(entry.amount) : monthlyPayment;
+    paidAmount += entry ? entryAmount(entry) : monthlyPayment;
   });
   const remainingAmount = totalOwed !== null ? Math.max(totalOwed - paidAmount, 0) : null;
   const pctByAmount = totalOwed ? Math.min((paidAmount / totalOwed) * 100, 100) : pct;
@@ -641,39 +675,39 @@ function computeSpendingInsights() {
     months[k].entries.forEach(e => {
       if (e.category === 'Savings') return;
       catStats[e.category] = catStats[e.category] || { sum: 0, count: 0 };
-      catStats[e.category].sum += Number(e.amount);
+      catStats[e.category].sum += entryAmount(e);
       catStats[e.category].count += 1;
     });
   });
 
   const flagged = [];
   current.entries.forEach(e => {
-    if (e.category === 'Savings' || Number(e.amount) <= 0) return;
+    if (e.category === 'Savings' || entryAmount(e) <= 0) return;
     const stat = catStats[e.category];
     if (stat && stat.count > 0) {
       const avg = stat.sum / stat.count;
-      if (avg > 0 && Number(e.amount) > avg * 1.15) {
-        flagged.push({ category: e.category, amount: Number(e.amount), avg, pctUp: (Number(e.amount) / avg - 1) * 100 });
+      if (avg > 0 && entryAmount(e) > avg * 1.15) {
+        flagged.push({ category: e.category, amount: entryAmount(e), avg, pctUp: (entryAmount(e) / avg - 1) * 100 });
       }
     }
   });
   flagged.sort((a, b) => b.pctUp - a.pctUp);
 
-  const spendable = current.entries.filter(e => e.category !== 'Savings' && Number(e.amount) > 0);
-  const spendTotal = spendable.reduce((s, e) => s + Number(e.amount), 0);
-  const topSpends = spendable.slice().sort((a, b) => Number(b.amount) - Number(a.amount)).slice(0, 3)
-    .map(e => ({ category: e.category, amount: Number(e.amount), pctOfSpend: spendTotal > 0 ? (Number(e.amount) / spendTotal * 100) : 0 }));
+  const spendable = current.entries.filter(e => e.category !== 'Savings' && entryAmount(e) > 0);
+  const spendTotal = spendable.reduce((s, e) => s + entryAmount(e), 0);
+  const topSpends = spendable.slice().sort((a, b) => entryAmount(b) - entryAmount(a)).slice(0, 3)
+    .map(e => ({ category: e.category, amount: entryAmount(e), pctOfSpend: spendTotal > 0 ? (entryAmount(e) / spendTotal * 100) : 0 }));
 
   const tips = [];
   const cur = config.currency || 'AED';
   const pendingItems = current.entries.filter(e => e.status === 'Pending');
   if (pendingItems.length) {
-    const pendingSum = pendingItems.reduce((s, e) => s + Number(e.amount), 0);
+    const pendingSum = pendingItems.reduce((s, e) => s + entryAmount(e), 0);
     tips.push(`You still have ${pendingItems.length} item${pendingItems.length > 1 ? 's' : ''} marked Pending this month (${cur} ${Math.round(pendingSum).toLocaleString('en-US')}). Settle those so your Remaining number stays accurate.`);
   }
-  const ccEntry = current.entries.find(e => /credit card/i.test(e.category) && Number(e.amount) > 0);
+  const ccEntry = current.entries.find(e => /credit card/i.test(e.category) && entryAmount(e) > 0);
   if (ccEntry) {
-    tips.push(`Credit Card shows ${cur} ${Math.round(Number(ccEntry.amount)).toLocaleString('en-US')} this month. Pay it in full where you can, carrying a balance is the most expensive way to spend.`);
+    tips.push(`Credit Card shows ${cur} ${Math.round(entryAmount(ccEntry)).toLocaleString('en-US')} this month. Pay it in full where you can, carrying a balance is the most expensive way to spend.`);
   }
   const savEntry = current.entries.find(e => e.category === 'Savings');
   const savedThisMonth = savEntry ? Number(savEntry.amount) : 0;
@@ -689,10 +723,12 @@ function computeSpendingInsights() {
 
 function buildTemplateEntries() {
   const entries = [];
-  config.fixedCosts.forEach(f => entries.push({ id: uid(), category: f.name, amount: f.amount, status:'', remarks:'', linkedDebtId: null, linkedFixedCostId: f.id, expenses: [] }));
+  // Linked entries carry no amount of their own, they always read live from Settings
+  // (config.fixedCosts / config.debts) unless amountOverride is set for this month.
+  config.fixedCosts.forEach(f => entries.push({ id: uid(), category: f.name, status:'', remarks:'', linkedDebtId: null, linkedFixedCostId: f.id, amountOverride: null, expenses: [] }));
   config.debts.forEach(d => {
     const { remaining } = debtProgress(d);
-    if (remaining === null || remaining > 0) entries.push({ id: uid(), category: d.name, amount: d.monthlyPayment, status:'', remarks:'', linkedDebtId: d.id, expenses: [] });
+    if (remaining === null || remaining > 0) entries.push({ id: uid(), category: d.name, status:'', remarks:'', linkedDebtId: d.id, amountOverride: null, expenses: [] });
   });
   // Savings/Extras start blank (not auto-filled to soak up whatever's left), so Remaining
   // reflects your real income minus what you've actually logged, not a pre-balanced plan.
@@ -726,7 +762,7 @@ function renderContent(fullAnim) {
     c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
   }
 
-  if (activeTab === 'dashboard') c.innerHTML = dashboardHTML();
+  if (activeTab === 'dashboard') { c.innerHTML = dashboardHTML(); try { renderDashboardBreakdownChart(); } catch (e) { /* never let a chart failure block the rest of the render */ } }
   if (activeTab === 'log') c.innerHTML = logHTML();
   if (activeTab === 'debt') c.innerHTML = debtHTML();
   if (activeTab === 'savings') { c.innerHTML = savingsHTML(); try { renderSavingsChart(); } catch (e) { /* never let a chart failure block the rest of the render */ } }
@@ -879,16 +915,16 @@ function dashboardHTML() {
   const income = Number(current.income) || 0;
   const savEntry = current.entries.find(e=>e.category==='Savings');
   const extrasEntry = current.entries.find(e=>e.category==='Extras');
-  const savingsAmt = savEntry ? Number(savEntry.amount) : 0;
-  const extrasAmt = extrasEntry ? Number(extrasEntry.amount) : 0;
-  const debtTotal = current.entries.filter(e => e.linkedDebtId).reduce((s,e)=>s+Number(e.amount),0);
+  const savingsAmt = savEntry ? entryAmount(savEntry) : 0;
+  const extrasAmt = extrasEntry ? entryAmount(extrasEntry) : 0;
+  const debtTotal = current.entries.filter(e => e.linkedDebtId).reduce((s,e)=>s+entryAmount(e),0);
   const fixedTotal = current.entries.reduce((s,e) => {
     if (e.linkedDebtId || e === savEntry || e === extrasEntry) return s;
-    return s + Number(e.amount);
+    return s + entryAmount(e);
   }, 0);
   const leftAfterBills = income - fixedTotal - debtTotal;
   const overcommitted = savingsAmt > leftAfterBills;
-  const currentTotal = current.entries.reduce((s,e)=>s+Number(e.amount),0);
+  const currentTotal = current.entries.reduce((s,e)=>s+entryAmount(e),0);
   const currentRemaining = income - currentTotal;
   const savingsRate = income > 0 ? (savingsAmt/income*100) : 0;
   const inc = incomeStat(income);
@@ -939,16 +975,62 @@ function dashboardHTML() {
         ${pendingEntries.slice(0,4).map(e => `
           <div style="display:flex; justify-content:space-between; font-size:13px; padding:2px 0;">
             <span style="color:var(--text-dim);">${escapeHtml(e.category)}</span>
-            <span class="amt">${AED(e.amount)}</span>
+            <span class="amt">${AED(entryAmount(e))}</span>
           </div>`).join('')}
         ${pendingEntries.length > 4 ? `<div class="note" style="margin-top:2px;">+${pendingEntries.length - 4} more in Monthly Log</div>` : ''}
       </div>` : `<div class="note" style="margin-top:10px; color:var(--teal);">Nothing pending, everything logged this month is settled.</div>`}
     </div>
   </div>
   <div class="card">
+    <div class="label">📊 This Month's Breakdown</div>
+    <div class="chart-wrap" style="height:220px;"><canvas id="dashboardBreakdownChart"></canvas></div>
+  </div>
+  <div class="card">
     <div class="note">Priority order: keep fixed costs and any active loans paid on time, let forced-savings plans (like a gold plan) finish their term, build a 3-month emergency fund, then grow ongoing savings.</div>
   </div>
   ${insightsHTML()}`;
+}
+let dashboardChartInstance = null;
+function renderDashboardBreakdownChart() {
+  const canvas = document.getElementById('dashboardBreakdownChart');
+  if (!canvas) return;
+  if (typeof Chart === 'undefined') {
+    canvas.parentElement.insertAdjacentHTML('beforeend', '<div class="note">Chart library didn\'t load, check your internet connection and reload.</div>');
+    return;
+  }
+  const keys = Object.keys(months).sort();
+  const currentKey = keys[keys.length - 1];
+  const current = months[currentKey];
+  const savEntry = current.entries.find(e => e.category === 'Savings');
+  const extrasEntry = current.entries.find(e => e.category === 'Extras');
+  const debtTotal = current.entries.filter(e => e.linkedDebtId).reduce((s, e) => s + entryAmount(e), 0);
+  const fixedTotal = current.entries.reduce((s, e) => {
+    if (e.linkedDebtId || e === savEntry || e === extrasEntry) return s;
+    return s + entryAmount(e);
+  }, 0);
+  const savingsAmt = savEntry ? entryAmount(savEntry) : 0;
+  const extrasAmt = extrasEntry ? entryAmount(extrasEntry) : 0;
+  const data = [fixedTotal, debtTotal, savingsAmt, extrasAmt].map(n => Math.max(n, 0));
+  if (!data.some(n => n > 0)) {
+    canvas.parentElement.insertAdjacentHTML('beforeend', '<div class="note">Log some entries this month to see a breakdown.</div>');
+    return;
+  }
+  const styles = getComputedStyle(document.documentElement);
+  const colors = [
+    styles.getPropertyValue('--text-dim').trim(),
+    styles.getPropertyValue('--gold').trim(),
+    styles.getPropertyValue('--teal').trim(),
+    styles.getPropertyValue('--rust').trim(),
+  ];
+  if (dashboardChartInstance) dashboardChartInstance.destroy();
+  dashboardChartInstance = new Chart(canvas, {
+    type: 'doughnut',
+    data: { labels: ['Fixed Costs', 'Commitments', 'Savings', 'Extras'], datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: styles.getPropertyValue('--text-dim').trim(), font: { family: 'Inter' } } } },
+    },
+  });
 }
 
 function insightsHTML() {
@@ -1147,9 +1229,9 @@ setInterval(updateLiveClock, 1000);
 function logHTML() {
   const keys = Object.keys(months).sort();
   const month = months[activeMonthKey] || months[keys[keys.length-1]];
-  const total = month.entries.reduce((s,e)=>s+Number(e.amount),0);
+  const total = month.entries.reduce((s,e)=>s+entryAmount(e),0);
   const remaining = month.income - total;
-  const paidTotal = month.entries.filter(e=>e.status==='Paid').reduce((s,e)=>s+Number(e.amount),0);
+  const paidTotal = month.entries.filter(e=>e.status==='Paid').reduce((s,e)=>s+entryAmount(e),0);
   const pendingTotal = total - paidTotal;
   const inc = incomeStat(month.income);
 
@@ -1157,11 +1239,14 @@ function logHTML() {
     const expenses = e.expenses || [];
     const isExpanded = expandedEntryId === e.id;
     const hasDetails = !!e.remarks || expenses.length > 0;
+    const isLinked = linkedItemAmount(e) !== null;
+    const overridden = entryIsOverridden(e);
     return `
     <div class="log-row" data-entry-row="${e.id}" ondragover="handleDragOver(event)" ondrop="handleEntryDrop(event,'${e.id}')" ondragleave="handleDragLeave(event)">
       <span class="drag-handle" draggable="true" ondragstart="handleDragStart(event,'${e.id}')" ondragend="handleDragEnd(event)" title="Drag to reorder">⠿</span>
       <input type="text" class="log-cat" value="${escapeAttr(e.category)}" onchange="updateEntry('${e.id}','category',this.value)"/>
-      <input type="number" class="log-amt" value="${e.amount}" oninput="liveUpdateLogTotals()" onchange="updateEntry('${e.id}','amount',this.value)"/>
+      <input type="number" class="log-amt" value="${entryAmount(e)}" oninput="liveUpdateLogTotals()" onchange="updateEntry('${e.id}','amount',this.value)"/>
+      ${overridden ? `<button class="icon-btn" onclick="resetEntryOverride('${e.id}')" title="Reset to Settings plan amount">↺</button>` : (isLinked ? `<span class="plan-pill" title="Following the amount set in Settings">plan</span>` : '')}
       <select class="log-status" onchange="updateEntry('${e.id}','status',this.value)">
         <option value="" ${e.status===''?'selected':''}>—</option>
         <option value="Paid" ${e.status==='Paid'?'selected':''}>Paid</option>
@@ -1292,13 +1377,24 @@ function updateEntry(id, field, value) {
     const newId = value || null;
     if (oldId && oldId !== newId) removeMonthFromDebt(oldId, activeMonthKey);
     entry.linkedDebtId = newId;
+    entry.amountOverride = null;
     syncDebtForEntry(entry);
+  } else if (field === 'amount') {
+    if (linkedItemAmount(entry) !== null) entry.amountOverride = Number(value);
+    else entry.amount = Number(value);
   } else {
-    entry[field] = field === 'amount' ? Number(value) : value;
+    entry[field] = value;
     if (field === 'status') syncDebtForEntry(entry);
   }
   markDirty();
   renderContent(false);
+}
+function resetEntryOverride(id) {
+  const month = months[activeMonthKey];
+  const entry = month.entries.find(e => e.id === id);
+  if (!entry) return;
+  entry.amountOverride = null;
+  markDirty(); renderContent(false);
 }
 function removeEntry(id) {
   const month = months[activeMonthKey];
@@ -1316,10 +1412,13 @@ function toggleEntryLink(id, checked) {
     const firstDebt = config.debts[0];
     if (!firstDebt) return;
     entry.linkedDebtId = firstDebt.id;
+    entry.amountOverride = null;
     syncDebtForEntry(entry);
   } else {
     if (entry.linkedDebtId) removeMonthFromDebt(entry.linkedDebtId, activeMonthKey);
+    entry.amount = entryAmount(entry);
     entry.linkedDebtId = null;
+    entry.amountOverride = null;
   }
   markDirty(); renderContent(false);
 }
@@ -1404,7 +1503,7 @@ function addExpense() {
   if (!entry) return;
   entry.expenses = entry.expenses || [];
   entry.expenses.push({ id: uid(), date, description, amount });
-  entry.amount = Number(entry.amount) - amount;
+  adjustEntryAmount(entry, -amount);
   expandedEntryId = targetId;
   markDirty(); renderContent(false);
 }
@@ -1416,7 +1515,7 @@ function removeExpense(entryId, expenseId) {
   if (idx === -1) return;
   const amt = Number(entry.expenses[idx].amount);
   entry.expenses.splice(idx, 1);
-  entry.amount = Number(entry.amount) + amt;
+  adjustEntryAmount(entry, amt);
   markDirty(); renderContent(false);
 }
 
@@ -1492,11 +1591,6 @@ function updateDebt(id, field, value) {
   const d = config.debts.find(d => d.id === id);
   if (!d) return;
   d[field] = (field==='name'||field==='type') ? value : Number(value);
-  if (field === 'monthlyPayment') {
-    Object.keys(months).forEach(k => {
-      months[k].entries.forEach(e => { if (e.linkedDebtId === id && !e.amount) e.amount = d.monthlyPayment; });
-    });
-  }
   markDirty(); renderContent(false);
 }
 function removeDebt(id) { config.debts = config.debts.filter(d => d.id !== id); markDirty(); renderContent(false); }
@@ -1671,6 +1765,7 @@ function convertAllAmounts(rate) {
     months[k].income = r(months[k].income);
     months[k].entries.forEach(e => {
       e.amount = r(e.amount);
+      if (e.amountOverride !== null && e.amountOverride !== undefined) e.amountOverride = r(e.amountOverride);
       (e.expenses || []).forEach(x => { x.amount = r(x.amount); });
     });
   });
@@ -1870,11 +1965,6 @@ function updateFixed(id, field, value) {
   const f = config.fixedCosts.find(f => f.id === id);
   if (!f) return;
   f[field] = field==='name' ? value : Number(value);
-  if (field === 'amount') {
-    Object.keys(months).forEach(k => {
-      months[k].entries.forEach(e => { if (e.linkedFixedCostId === id && !e.amount) e.amount = f.amount; });
-    });
-  }
   markDirty(); renderContent(false);
 }
 function removeFixed(id) { config.fixedCosts = config.fixedCosts.filter(f => f.id !== id); markDirty(); renderContent(false); }
@@ -1924,7 +2014,7 @@ function exportToExcel() {
       const debt = e.linkedDebtId ? config.debts.find(d => d.id === e.linkedDebtId) : null;
       logRows.push({
         Month: m.label || keyToLabel(k), Category: e.category, Remarks: e.remarks,
-        Amount: e.amount, Status: e.status, 'Linked Commitment': debt ? debt.name : '',
+        Amount: entryAmount(e), Status: e.status, 'Linked Commitment': debt ? debt.name : '',
       });
       (e.expenses||[]).forEach(x => {
         expenseRows.push({ Month: m.label || keyToLabel(k), Category: e.category, Date: x.date, Description: x.description, Amount: x.amount });
