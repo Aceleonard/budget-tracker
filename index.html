@@ -10,40 +10,40 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Debt-Free" />
-<meta name="theme-color" content="#141B2E" />
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<meta name="theme-color" content="#090C14" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
   :root[data-theme="dark"] {
-    --bg: #141B2E;
-    --bg-soft: #1B2540;
-    --panel: #202B4A;
-    --panel-line: #32406B;
-    --gold: #C9A24B;
-    --gold-soft: #E8C878;
-    --teal: #3E9C87;
-    --rust: #D9694A;
-    --text: #F2EEE3;
-    --text-dim: #B9C0D6;
-    --road: #0E1524;
-    --shadow: 0 8px 24px rgba(0,0,0,0.35);
+    --bg: #090C14;
+    --bg-soft: #11151F;
+    --panel: #151A27;
+    --panel-line: #252C3F;
+    --gold: #35D48C;
+    --gold-soft: #74E8B4;
+    --teal: #4BA3F5;
+    --rust: #F0685E;
+    --text: #EEF1F8;
+    --text-dim: #838BA0;
+    --road: #05070C;
+    --shadow: 0 10px 28px rgba(0,0,0,0.45);
   }
   :root[data-theme="light"] {
-    --bg: #FAF6EE;
-    --bg-soft: #F0E9D8;
+    --bg: #F5F6FA;
+    --bg-soft: #EBEEF5;
     --panel: #FFFFFF;
-    --panel-line: #E4DAC4;
-    --gold: #B8863E;
-    --gold-soft: #D9A94F;
-    --teal: #2E7D6B;
-    --rust: #C1502E;
-    --text: #2B2417;
-    --text-dim: #7A7260;
-    --road: #2B2417;
-    --shadow: 0 8px 20px rgba(43,36,23,0.10);
+    --panel-line: #DEE2ED;
+    --gold: #0E9F6E;
+    --gold-soft: #12B981;
+    --teal: #2C7BE5;
+    --rust: #E1493F;
+    --text: #141723;
+    --text-dim: #6B7285;
+    --road: #10131F;
+    --shadow: 0 8px 20px rgba(20,23,35,0.08);
   }
 
   :root[data-theme="dark"] { color-scheme: dark; }
@@ -52,61 +52,65 @@
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
-    font-family: 'Inter', sans-serif; transition: background 0.3s ease, color 0.3s ease;
+    font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s ease, color 0.3s ease;
     min-height: 100vh;
+    background-image: radial-gradient(900px 500px at 100% -8%, color-mix(in srgb, var(--gold) 6%, transparent), transparent 60%);
+    background-attachment: fixed;
   }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 18px 60px; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px 60px; }
 
   .topbar {
     display:flex; justify-content: space-between; align-items:center; gap: 10px; flex-wrap: wrap;
-    position: sticky; top: 0; z-index: 40; margin: 0 -18px 22px; padding: 14px 18px;
-    background: color-mix(in srgb, var(--bg) 88%, transparent);
-    backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+    position: sticky; top: 0; z-index: 40; margin: 0 -20px 24px; padding: 14px 20px;
+    background: color-mix(in srgb, var(--bg) 80%, transparent);
+    backdrop-filter: blur(16px) saturate(160%); -webkit-backdrop-filter: blur(16px) saturate(160%);
     border-bottom: 1px solid var(--panel-line);
   }
-  .brand { font-family:'Fraunces', serif; font-weight: 700; font-size: 21px; display:flex; align-items:center; gap:8px; }
+  .brand { font-family:'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; display:flex; align-items:center; gap:10px; letter-spacing: -0.01em; }
   .brand-mark {
-    width: 30px; height: 30px; border-radius: 9px; flex: 0 0 auto;
-    background: linear-gradient(145deg, var(--gold-soft), var(--gold));
-    display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+    width: 32px; height: 32px; border-radius: 10px; flex: 0 0 auto;
+    background: linear-gradient(155deg, var(--gold-soft), var(--gold));
+    display:flex; align-items:center; justify-content:center; font-size:15px; box-shadow: 0 4px 12px color-mix(in srgb, var(--gold) 45%, transparent);
   }
-  .brand span { color: var(--gold); }
+  .brand span { color: var(--text-dim); font-weight: 500; }
   .topbar-meta { display:flex; align-items:center; gap:10px; flex-wrap: wrap; }
 
   .theme-toggle {
-    display:flex; align-items:center; gap:6px; background: var(--panel); border: 1px solid var(--panel-line);
+    display:flex; align-items:center; gap:6px; background: var(--bg-soft); border: 1px solid var(--panel-line);
     padding: 7px 14px; border-radius: 999px; cursor:pointer; font-size:13px; font-weight:600; color: var(--text);
-    box-shadow: var(--shadow); transition: transform 0.15s ease;
+    transition: transform 0.15s ease, border-color 0.15s ease;
   }
-  .theme-toggle:hover { transform: scale(1.03); }
+  .theme-toggle:hover { transform: scale(1.03); border-color: var(--gold); }
 
   .tabs {
-    display:flex; gap:4px; margin-bottom: 22px; flex-wrap: wrap;
-    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 16px; padding: 6px;
+    display:flex; gap:2px; margin-bottom: 24px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 14px; padding: 5px;
     box-shadow: var(--shadow);
   }
   .tab-btn {
-    flex: 1 1 auto; padding: 10px 14px; border-radius: 11px; border: none; background: transparent;
-    color: var(--text-dim); font-family:'Inter'; font-weight:600; font-size: 13.5px; cursor:pointer;
+    flex: 1 1 auto; padding: 10px 14px; border-radius: 10px; border: none; background: transparent;
+    color: var(--text-dim); font-family:'Plus Jakarta Sans'; font-weight:600; font-size: 13.5px; cursor:pointer;
     display:flex; align-items:center; justify-content:center; gap:7px; transition: all 0.18s ease; white-space: nowrap;
   }
   .tab-btn .tab-icon { font-size: 15px; line-height: 1; }
   .tab-btn:hover { color: var(--text); background: var(--bg-soft); }
-  .tab-btn.active { background: var(--gold); color: var(--road); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .tab-btn.active { background: color-mix(in srgb, var(--gold) 16%, transparent); color: var(--gold); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 40%, transparent); }
 
   @media (max-width: 720px) {
-    .wrap { padding-bottom: 92px; }
+    .wrap { padding-bottom: 96px; }
     #tabs.tabs {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; margin: 0; border-radius: 0;
       border: none; border-top: 1px solid var(--panel-line);
       padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
-      box-shadow: 0 -8px 22px rgba(0,0,0,0.18); gap: 0;
+      box-shadow: 0 -8px 22px rgba(0,0,0,0.28); gap: 0;
+      background: color-mix(in srgb, var(--panel) 96%, transparent);
+      backdrop-filter: blur(14px);
     }
     #tabs.tabs .tab-btn {
       flex-direction: column; gap: 2px; padding: 6px 2px; border-radius: 12px; font-size: 10.5px;
     }
     #tabs.tabs .tab-btn .tab-icon { font-size: 19px; }
-    #tabs.tabs .tab-btn.active { background: transparent; color: var(--gold); box-shadow: none; }
+    #tabs.tabs .tab-btn.active { background: transparent; box-shadow: none; }
     .toast { bottom: 84px; }
   }
 
@@ -123,13 +127,13 @@
   #content.quiet .card, #content.quiet .stop-dot { animation: none !important; }
 
   .card {
-    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 18px;
-    padding: 20px 22px; box-shadow: var(--shadow); margin-bottom: 16px;
+    background: var(--panel); border: 1px solid var(--panel-line); border-radius: 20px;
+    padding: 22px 24px; box-shadow: var(--shadow); margin-bottom: 16px;
     animation: fadeInUp 0.45s ease both;
     transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
   }
-  .card:hover { border-color: var(--gold); box-shadow: 0 10px 28px rgba(0,0,0,0.4); }
-  :root[data-theme="light"] .card:hover { box-shadow: 0 10px 24px rgba(43,36,23,0.14); }
+  .card:hover { border-color: color-mix(in srgb, var(--gold) 45%, var(--panel-line)); transform: translateY(-1px); box-shadow: 0 14px 32px rgba(0,0,0,0.5); }
+  :root[data-theme="light"] .card:hover { box-shadow: 0 12px 26px rgba(20,23,35,0.10); }
   .btn:active, .tab-btn:active, .icon-btn:active { transform: scale(0.94); }
   .grid { display:grid; gap: 14px; }
   .grid-2 { grid-template-columns: repeat(2, 1fr); }
@@ -138,20 +142,20 @@
   @media (max-width: 720px) { .grid-3, .grid-4 { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 480px) { .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; } }
 
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--text-dim); margin-bottom: 5px; font-weight: 700; }
-  .value { font-family:'Fraunces', serif; font-weight: 600; font-size: 25px; letter-spacing: -0.01em; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-dim); margin-bottom: 5px; font-weight: 700; }
+  .value { font-family:'Space Grotesk', sans-serif; font-weight: 600; font-size: 26px; letter-spacing: -0.01em; }
   .value.small { font-size: 18px; }
 
   input[type=text], input[type=number], input[type=password], select {
-    width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--panel-line);
-    background: var(--bg-soft); color: var(--text); font-family:'Inter'; font-size: 14px; outline: none;
+    width: 100%; padding: 10px 12px; border-radius: 11px; border: 1px solid var(--panel-line);
+    background: var(--bg-soft); color: var(--text); font-family:'Plus Jakarta Sans'; font-size: 14px; outline: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
-  input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 20%, transparent); }
+  input:focus, select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 18%, transparent); }
 
   textarea.wrap-input {
-    width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--panel-line);
-    background: var(--bg-soft); color: var(--text); font-family:'Inter'; font-size: 14px; outline: none;
+    width: 100%; padding: 8px 10px; border-radius: 11px; border: 1px solid var(--panel-line);
+    background: var(--bg-soft); color: var(--text); font-family:'Plus Jakarta Sans'; font-size: 14px; outline: none;
     resize: none; overflow: hidden; white-space: pre-wrap; word-break: break-word; line-height: 1.4;
     min-height: 38px; display: block; transition: border-color 0.15s ease;
   }
@@ -159,19 +163,19 @@
 
   .btn {
     padding: 10px 18px; border-radius: 12px; border: none; cursor: pointer; font-weight: 700;
-    font-family:'Inter'; font-size: 14px; transition: transform 0.15s ease, box-shadow 0.15s ease;
+    font-family:'Plus Jakarta Sans'; font-size: 14px; transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .btn:hover { transform: scale(1.03); }
   .btn:active { transform: scale(0.97); }
-  .btn-primary { background: linear-gradient(155deg, var(--gold-soft), var(--gold)); color: var(--road); box-shadow: 0 4px 14px rgba(201,162,75,0.28); }
-  .btn-primary:hover { box-shadow: 0 6px 18px rgba(201,162,75,0.38); }
+  .btn-primary { background: linear-gradient(155deg, var(--gold-soft), var(--gold)); color: var(--road); box-shadow: 0 6px 16px color-mix(in srgb, var(--gold) 38%, transparent); }
+  .btn-primary:hover { box-shadow: 0 8px 20px color-mix(in srgb, var(--gold) 48%, transparent); }
   .btn-danger { background: var(--rust); color: #fff; }
   .btn-ghost { background: transparent; color: var(--gold); border: 1px dashed var(--gold); }
   .icon-btn { background: transparent; border:none; cursor:pointer; font-size: 16px; padding: 4px 8px; border-radius: 8px; transition: background 0.15s ease; }
 
   .stat-tile { display:flex; align-items:center; gap:14px; }
   .stat-avatar {
-    width: 44px; height: 44px; border-radius: 13px; flex: 0 0 auto; font-size: 19px;
+    width: 46px; height: 46px; border-radius: 50%; flex: 0 0 auto; font-size: 19px;
     display:flex; align-items:center; justify-content:center;
     background: color-mix(in srgb, var(--gold) 16%, transparent);
   }
@@ -188,12 +192,12 @@
   table { width: 100%; border-collapse: collapse; table-layout: fixed; }
   th { text-align:left; font-size: 11px; text-transform:uppercase; color: var(--text-dim); padding: 4px 6px; font-weight:700; }
   td { padding: 5px 6px; vertical-align: middle; }
-  td.amt { font-family:'JetBrains Mono'; }
+  td.amt { font-family:'IBM Plex Mono'; }
   .paid-pill { display:inline-block; padding: 3px 10px; border-radius: 999px; font-size:12px; font-weight:700; }
-  .paid-pill.paid { background: rgba(62,156,135,0.18); color: var(--teal); }
-  .paid-pill.pending { background: rgba(217,105,74,0.15); color: var(--rust); }
+  .paid-pill.paid { background: color-mix(in srgb, var(--teal) 18%, transparent); color: var(--teal); }
+  .paid-pill.pending { background: color-mix(in srgb, var(--rust) 16%, transparent); color: var(--rust); }
 
-  .amt { font-family:'JetBrains Mono'; }
+  .amt { font-family:'IBM Plex Mono'; }
 
   .drag-handle { cursor:grab; color:var(--text-dim); padding:0 2px; user-select:none; font-size:15px; flex:0 0 auto; touch-action:none; }
   .drag-handle:active { cursor:grabbing; }
@@ -225,21 +229,21 @@
   .fixed-row:last-child { border-bottom:none; }
 
   .route {
-    border-radius: 22px; padding: 26px; margin-bottom: 20px;
-    background: linear-gradient(160deg, var(--road) 0%, #0A0F1C 65%, var(--road) 100%);
-    box-shadow: 0 14px 36px rgba(0,0,0,0.4); position: relative; overflow:hidden;
+    border-radius: 24px; padding: 28px; margin-bottom: 20px;
+    background: linear-gradient(160deg, var(--road) 0%, #0C1020 65%, var(--road) 100%);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.45); position: relative; overflow:hidden;
   }
   .route::before {
     content:''; position:absolute; inset:0; pointer-events:none;
-    background: radial-gradient(560px 220px at 8% -10%, rgba(232,200,120,0.16), transparent 70%);
+    background: radial-gradient(600px 240px at 8% -10%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%);
   }
-  :root[data-theme="light"] .route { background: linear-gradient(160deg, #3A3222 0%, #2B2417 65%, #3A3222 100%); }
-  .route-title { font-family:'Fraunces', serif; font-weight: 700; font-size: 24px; color: #F2EEE3; margin: 0; }
-  .route-sub { font-family:'JetBrains Mono'; font-size: 12px; color: #B9C0D6; }
-  .route-track { display:flex; justify-content: space-between; position: relative; margin-top: 26px; flex-wrap: wrap; gap: 16px 0; }
+  :root[data-theme="light"] .route { background: linear-gradient(160deg, #171B2A 0%, #10131F 65%, #171B2A 100%); }
+  .route-title { font-family:'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; color: #F2F4FB; margin: 0; }
+  .route-sub { font-family:'IBM Plex Mono'; font-size: 12px; color: #8891A8; }
+  .route-track { display:flex; justify-content: space-between; position: relative; margin-top: 28px; flex-wrap: wrap; gap: 16px 0; }
   .route-line { position:absolute; top: 17px; left: 0; right: 0; height: 2px;
-    background-image: repeating-linear-gradient(90deg, #E8C878 0 12px, transparent 12px 22px);
-    background-size: 34px 2px; opacity: 0.55; animation: dashFlow 1.2s linear infinite; }
+    background-image: repeating-linear-gradient(90deg, var(--gold-soft) 0 12px, transparent 12px 22px);
+    background-size: 34px 2px; opacity: 0.5; animation: dashFlow 1.2s linear infinite; }
   .stop { display:flex; flex-direction:column; align-items:center; text-align:center; flex:1; min-width:0; position:relative; z-index:1; }
   @media (max-width: 520px) {
     .route { padding: 18px; }
@@ -248,9 +252,9 @@
   }
   .stop-dot { width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center;
     font-size: 16px; margin-bottom: 6px; box-shadow: 0 0 0 4px var(--road); animation: popIn 0.5s ease both; }
-  :root[data-theme="light"] .stop-dot { box-shadow: 0 0 0 4px #2B2417; }
-  .stop-label { color:#F2EEE3; font-size: 13px; font-weight: 700; }
-  .stop-sub { color:#B9C0D6; font-size: 11px; font-family:'JetBrains Mono'; margin-top:2px; }
+  :root[data-theme="light"] .stop-dot { box-shadow: 0 0 0 4px #10131F; }
+  .stop-label { color:#F2F4FB; font-size: 13px; font-weight: 700; }
+  .stop-sub { color:#8891A8; font-size: 11px; font-family:'IBM Plex Mono'; margin-top:2px; }
 
   .month-select-row { display:flex; justify-content: space-between; align-items:center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
   .progress-bar { width:100%; height: 10px; border-radius: 999px; background: var(--bg-soft); overflow:hidden; }
@@ -263,7 +267,7 @@
 
   .toast {
     position: fixed; bottom: 22px; right: 22px; background: var(--teal); color: #fff;
-    padding: 10px 20px; border-radius: 999px; font-family:'Inter'; font-weight:700; font-size: 14px;
+    padding: 10px 20px; border-radius: 999px; font-family:'Plus Jakarta Sans'; font-weight:700; font-size: 14px;
     box-shadow: var(--shadow); opacity: 0; transform: translateY(12px); pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease; z-index: 9998;
   }
@@ -273,24 +277,24 @@
   .save-btn {
     display:inline-flex; align-items:center; gap:6px; background: var(--teal); color:#fff;
     padding: 8px 16px; border-radius: 12px; border:none; cursor:pointer; font-weight:700;
-    font-family:'Inter'; font-size: 13px; transition: transform 0.15s ease;
+    font-family:'Plus Jakarta Sans'; font-size: 13px; transition: transform 0.15s ease;
   }
   .save-btn:hover { transform: scale(1.03); }
   .save-btn:active { transform: scale(0.96); }
 
-  .flow-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-family:'JetBrains Mono'; font-size:14px; }
+  .flow-row { display:flex; justify-content:space-between; align-items:center; padding:7px 0; font-family:'IBM Plex Mono'; font-size:14px; }
   .flow-row.total { border-top:1px solid var(--panel-line); margin-top:4px; padding-top:10px; font-weight:700; font-size:16px; }
-  .flow-label { color: var(--text-dim); font-family:'Inter'; font-size:13px; }
+  .flow-label { color: var(--text-dim); font-family:'Plus Jakarta Sans'; font-size:13px; }
   .flow-row.total .flow-label { color: var(--text); font-weight:600; }
 
   .date-picker-popup {
     background: var(--panel); border: 1px solid var(--panel-line); border-radius: 14px;
-    padding: 12px; box-shadow: var(--shadow); width: 230px; font-family: 'Inter';
+    padding: 12px; box-shadow: var(--shadow); width: 230px; font-family: 'Plus Jakarta Sans';
   }
   .dp-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; color:var(--text); font-weight:700; font-size:13px; }
   .dp-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; text-align:center; }
   .dp-dow { font-size:11px; color:var(--text-dim); margin-bottom:4px; }
-  .dp-day { background:transparent; border:none; color:var(--text); padding:6px 0; border-radius:8px; cursor:pointer; font-family:'Inter'; font-size:13px; }
+  .dp-day { background:transparent; border:none; color:var(--text); padding:6px 0; border-radius:8px; cursor:pointer; font-family:'Plus Jakarta Sans'; font-size:13px; }
   .dp-day:hover { background: var(--bg-soft); }
   .dp-selected { background: var(--gold) !important; color: var(--road) !important; font-weight:700; }
   .dp-today { box-shadow: inset 0 0 0 1px var(--gold); }
@@ -314,7 +318,7 @@
 </style>
 </head>
 <body>
-<div id="authLoading" style="min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:'Inter'; color:var(--text-dim);">Loading…</div>
+<div id="authLoading" style="min-height:100vh; display:flex; align-items:center; justify-content:center; font-family:'Plus Jakarta Sans'; color:var(--text-dim);">Loading…</div>
 
 <div id="authGate" class="auth-gate" style="display:none;">
   <div class="card auth-card">
@@ -338,7 +342,7 @@
   <div class="topbar">
     <div class="brand"><span class="brand-mark">🚩</span>Ace's <span>Route to Debt-Free</span></div>
     <div class="topbar-meta">
-      <div id="liveClock" style="font-family:'JetBrains Mono'; font-size:12px; color:var(--text-dim);"></div>
+      <div id="liveClock" style="font-family:'IBM Plex Mono'; font-size:12px; color:var(--text-dim);"></div>
       <div class="account-box">
         <span id="accountEmail"></span>
         <button class="icon-btn" onclick="signOut()" title="Sign out">🚪</button>
@@ -929,7 +933,7 @@ function checkCelebrations() {
 }
 
 function confettiBurst() {
-  const colors = ['#C9A24B', '#3E9C87', '#D9694A', '#E8C878'];
+  const colors = ['#35D48C', '#4BA3F5', '#F0685E', '#74E8B4'];
   const layer = document.createElement('div');
   layer.style.cssText = 'position:fixed; inset:0; pointer-events:none; z-index:9999; overflow:hidden;';
   document.body.appendChild(layer);
@@ -1052,9 +1056,9 @@ function dashboardHTML() {
         <div><div class="label" style="margin-bottom:2px">Savings Rate</div><div class="value small" data-num="${savingsRate}" data-suffix="%" data-decimals="1">${savingsRate.toFixed(1)}%</div></div>
       </div>
       <div style="display:flex; gap:16px; margin-top:14px; padding-top:12px; border-top:1px solid var(--panel-line);">
-        <div><div class="label" style="margin-bottom:2px; color:var(--teal);">✅ Paid</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${paidEntries.length}</div></div>
-        <div><div class="label" style="margin-bottom:2px; color:var(--rust);">⏳ Pending</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${pendingEntries.length}</div></div>
-        <div><div class="label" style="margin-bottom:2px; color:var(--text-dim);">— Unmarked</div><div style="font-family:'JetBrains Mono'; font-weight:700;">${unmarkedEntries.length}</div></div>
+        <div><div class="label" style="margin-bottom:2px; color:var(--teal);">✅ Paid</div><div style="font-family:'IBM Plex Mono'; font-weight:700;">${paidEntries.length}</div></div>
+        <div><div class="label" style="margin-bottom:2px; color:var(--rust);">⏳ Pending</div><div style="font-family:'IBM Plex Mono'; font-weight:700;">${pendingEntries.length}</div></div>
+        <div><div class="label" style="margin-bottom:2px; color:var(--text-dim);">— Unmarked</div><div style="font-family:'IBM Plex Mono'; font-weight:700;">${unmarkedEntries.length}</div></div>
       </div>
       ${pendingEntries.length ? `
       <div style="margin-top:10px;">
@@ -1115,7 +1119,7 @@ function renderDashboardBreakdownChart() {
     data: { labels: ['Fixed Costs', 'Commitments', 'Savings', 'Extras'], datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: 'bottom', labels: { color: styles.getPropertyValue('--text-dim').trim(), font: { family: 'Inter' } } } },
+      plugins: { legend: { position: 'bottom', labels: { color: styles.getPropertyValue('--text-dim').trim(), font: { family: 'Plus Jakarta Sans' } } } },
     },
   });
 }
@@ -1358,7 +1362,7 @@ function logHTML() {
       <div style="margin-top:6px; border-left:2px solid var(--panel-line); padding-left:10px;">
         ${expenses.map(x => `
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; padding:4px 0; font-size:13px;">
-            <div style="color:var(--text-dim); font-family:'JetBrains Mono'; min-width:80px;">${x.date}</div>
+            <div style="color:var(--text-dim); font-family:'IBM Plex Mono'; min-width:80px;">${x.date}</div>
             <div style="flex:1;">${escapeHtml(x.description)}</div>
             <div class="amt">${AED(x.amount)}</div>
             <button class="icon-btn" onclick="removeExpense('${e.id}','${x.id}')" title="Remove">🗑️</button>
@@ -1623,7 +1627,7 @@ function debtHTML() {
       <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;">
         <div style="flex:1; min-width:200px;">
           <textarea class="wrap-input" rows="1" oninput="growOnInput(this)" onchange="updateDebt('${d.id}','name',this.value)"
-            style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(d.name)}</textarea>
+            style="font-family:'Space Grotesk',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(d.name)}</textarea>
           <div class="label" style="margin-top:2px;">${escapeAttr(d.type)}</div>
         </div>
         <button class="icon-btn" onclick="removeDebt('${d.id}')" title="Remove">🗑️</button>
@@ -1632,7 +1636,7 @@ function debtHTML() {
         <div><div class="label">Monthly Payment</div><input type="number" value="${d.monthlyPayment}" onchange="updateDebt('${d.id}','monthlyPayment',this.value)"/></div>
         <div><div class="label">Term (months)</div><input type="number" value="${d.termMonths}" onchange="updateDebt('${d.id}','termMonths',this.value)"/></div>
         <div><div class="label">Starting Count</div><input type="number" value="${d.paymentsMade}" onchange="updateDebt('${d.id}','paymentsMade',this.value)"/></div>
-        <div><div class="label">Est. Payoff</div><div style="font-family:'JetBrains Mono'; padding-top:8px;">${payoff}</div></div>
+        <div><div class="label">Est. Payoff</div><div style="font-family:'IBM Plex Mono'; padding-top:8px;">${payoff}</div></div>
       </div>
       ${!isDone && d.termMonths > 0 ? `
       <button class="btn ${isPaidThisMonth ? '' : 'btn-primary'}" style="margin-top:12px; ${isPaidThisMonth ? `background:var(--teal); color:#fff;` : ''}" onclick="markDebtPaid('${d.id}')">
@@ -1641,8 +1645,8 @@ function debtHTML() {
       ${d.termMonths>0 ? `
       <div style="margin-top:12px;">
         <div class="progress-bar"><div class="progress-fill" data-target="${pctByAmount}" style="background:${pctByAmount>=100?'var(--teal)':'var(--gold)'}"></div></div>
-        <div class="label" style="margin-top:4px; font-family:'JetBrains Mono'; text-transform:none;">${totalMade}/${d.termMonths} months marked (${d.paymentsMade} starting + ${(d.paidMonths||[]).length} marked here)</div>
-        <div class="label" style="margin-top:2px; font-family:'JetBrains Mono'; text-transform:none; color:${remainingAmount<=0?'var(--teal)':'var(--gold)'};">
+        <div class="label" style="margin-top:4px; font-family:'IBM Plex Mono'; text-transform:none;">${totalMade}/${d.termMonths} months marked (${d.paymentsMade} starting + ${(d.paidMonths||[]).length} marked here)</div>
+        <div class="label" style="margin-top:2px; font-family:'IBM Plex Mono'; text-transform:none; color:${remainingAmount<=0?'var(--teal)':'var(--gold)'};">
           ${config.currency||'AED'} ${Math.round(paidAmount).toLocaleString('en-US')} paid of ${config.currency||'AED'} ${Math.round(totalOwed).toLocaleString('en-US')} · ${config.currency||'AED'} ${Math.round(remainingAmount).toLocaleString('en-US')} left${remainingAmount>0 && monthsLeftAtUsualRate ? ` (~${monthsLeftAtUsualRate} more payment${monthsLeftAtUsualRate>1?'s':''} at your usual rate)` : ''}
         </div>
       </div>` : ''}
@@ -1794,10 +1798,10 @@ function renderSavingsChart() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: textDim, font: { family: 'Inter' } } } },
+      plugins: { legend: { labels: { color: textDim, font: { family: 'Plus Jakarta Sans' } } } },
       scales: {
-        x: { ticks: { color: textDim, font: { family:'Inter' } }, grid: { color: panelLine } },
-        y: { ticks: { color: textDim, font: { family:'Inter' } }, grid: { color: panelLine } },
+        x: { ticks: { color: textDim, font: { family:'Plus Jakarta Sans' } }, grid: { color: panelLine } },
+        y: { ticks: { color: textDim, font: { family:'Plus Jakarta Sans' } }, grid: { color: panelLine } },
       },
     },
   });
@@ -1922,7 +1926,7 @@ function goalsHTML() {
           </select>
           <div style="flex:1;">
             <textarea class="wrap-input" rows="1" oninput="growOnInput(this)" onchange="updateGoal('${g.id}','name',this.value)"
-              style="font-family:'Fraunces',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(g.name)}</textarea>
+              style="font-family:'Space Grotesk',serif; font-size:16px; font-weight:600; background:transparent; border:none; padding:0; color:var(--text);">${escapeHtml(g.name)}</textarea>
             ${(g.targetDate || g.location) ? `<div class="label" style="margin-top:2px;">${g.targetDate ? `Target: ${escapeAttr(g.targetDate)}` : ''}${g.targetDate && g.location ? ' · ' : ''}${g.location ? escapeAttr(g.location) : ''}</div>` : ''}
           </div>
         </div>
@@ -1948,7 +1952,7 @@ function goalsHTML() {
       </div>
       <div style="margin-top:12px;">
         <div class="progress-bar"><div class="progress-fill" data-target="${pct}" style="background:${done?'var(--teal)':'var(--gold)'}"></div></div>
-        <div class="label" style="margin-top:4px; font-family:'JetBrains Mono'; text-transform:none;">
+        <div class="label" style="margin-top:4px; font-family:'IBM Plex Mono'; text-transform:none;">
           ${done ? `🎉 Fully funded!` : `${AED(g.savedAmount)} of ${AED(g.targetAmount)} · ${AED(remaining)} to go (${pct.toFixed(0)}%)`}
         </div>
       </div>
@@ -2011,7 +2015,7 @@ function settingsHTML() {
     </select>
     ${!isPresetCurrency ? `<input type="text" id="customCurrencyInput" value="${escapeAttr(config.currency)}" placeholder="e.g. GBP" onchange="handleCurrencyChange(this.value)" style="margin-top:8px;"/>` : ''}
     <div class="note" style="margin-top:6px;">Switching currency fetches a live exchange rate and converts every amount in your tracker, income, costs, debts, goals, everything. Needs an internet connection.</div>
-    ${config.lastConversion ? `<div class="note" style="margin-top:4px; font-family:'JetBrains Mono';">Last converted: ${escapeAttr(config.lastConversion.from)} → ${escapeAttr(config.lastConversion.to)} at ${config.lastConversion.rate} on ${escapeAttr(config.lastConversion.date)}</div>` : ''}
+    ${config.lastConversion ? `<div class="note" style="margin-top:4px; font-family:'IBM Plex Mono';">Last converted: ${escapeAttr(config.lastConversion.from)} → ${escapeAttr(config.lastConversion.to)} at ${config.lastConversion.rate} on ${escapeAttr(config.lastConversion.date)}</div>` : ''}
   </div>
   <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
