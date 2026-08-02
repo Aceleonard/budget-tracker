@@ -1522,6 +1522,14 @@ function savingsHTML() {
     <div class="card"><div class="label">Emergency Fund Goal</div><input type="number" value="${config.emergencyFundGoal}" onchange="updateConfig('emergencyFundGoal',this.value)"/></div>
   </div>
   <div class="card">
+    <div class="label">💰 Add to ${escapeAttr(months[activeMonthKey].label || keyToLabel(activeMonthKey))}'s Savings</div>
+    <div class="note" style="margin:6px 0 10px;">Quickly log money you've set aside, this updates the Savings row in your Monthly Log automatically.</div>
+    <div style="display:flex; gap:8px;">
+      <input type="number" id="savingsContribInput" placeholder="Add an amount" style="flex:1;"/>
+      <button class="btn btn-primary" onclick="addSavingsContribution()">➕ Add</button>
+    </div>
+  </div>
+  <div class="card">
     <div class="label">Where Is This Kept?</div>
     <select onchange="updateConfigText('savingsLocation', this.value)" style="margin-top:6px;">
       <option value="" ${config.savingsLocation===''?'selected':''}>— select —</option>
@@ -1569,6 +1577,19 @@ function renderSavingsChart() {
       },
     },
   });
+}
+function addSavingsContribution() {
+  const input = document.getElementById('savingsContribInput');
+  const amount = Number(input && input.value) || 0;
+  if (amount <= 0) return;
+  const month = months[activeMonthKey];
+  let entry = month.entries.find(e => e.category === 'Savings');
+  if (!entry) {
+    entry = { id: uid(), category: 'Savings', amount: 0, status: '', remarks: '', linkedDebtId: null, expenses: [] };
+    month.entries.push(entry);
+  }
+  entry.amount = Number(entry.amount) + amount;
+  markDirty(); renderContent(false);
 }
 function updateConfig(field, value) {
   config[field] = Number(value);
