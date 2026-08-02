@@ -694,17 +694,10 @@ function buildTemplateEntries() {
     const { remaining } = debtProgress(d);
     if (remaining === null || remaining > 0) entries.push({ id: uid(), category: d.name, amount: d.monthlyPayment, status:'', remarks:'', linkedDebtId: d.id, expenses: [] });
   });
-  const fixedTotal = config.fixedCosts.reduce((s,f)=>s+Number(f.amount),0);
-  const debtTotal = config.debts.reduce((s,d)=>{
-    const { remaining } = debtProgress(d);
-    const active = remaining === null || remaining > 0;
-    return s + (active ? Number(d.monthlyPayment):0);
-  },0);
-  const available = config.income - fixedTotal - debtTotal;
-  const savings = Math.max(Math.min(Math.round(config.monthlyTarget), available), 0);
-  const extras = Math.max(Math.round(available-savings),0);
-  entries.push({ id: uid(), category:'Savings', amount: savings, status:'', remarks:'', linkedDebtId: null, expenses: [] });
-  entries.push({ id: uid(), category:'Extras', amount: extras, status:'', remarks:'', linkedDebtId: null, expenses: [] });
+  // Savings/Extras start blank (not auto-filled to soak up whatever's left), so Remaining
+  // reflects your real income minus what you've actually logged, not a pre-balanced plan.
+  entries.push({ id: uid(), category:'Savings', amount: 0, status:'', remarks:'', linkedDebtId: null, expenses: [] });
+  entries.push({ id: uid(), category:'Extras', amount: 0, status:'', remarks:'', linkedDebtId: null, expenses: [] });
   return entries;
 }
 
