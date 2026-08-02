@@ -729,7 +729,7 @@ function renderContent(fullAnim) {
   if (activeTab === 'dashboard') c.innerHTML = dashboardHTML();
   if (activeTab === 'log') c.innerHTML = logHTML();
   if (activeTab === 'debt') c.innerHTML = debtHTML();
-  if (activeTab === 'savings') { c.innerHTML = savingsHTML(); renderSavingsChart(); }
+  if (activeTab === 'savings') { c.innerHTML = savingsHTML(); try { renderSavingsChart(); } catch (e) { /* never let a chart failure block the rest of the render */ } }
   if (activeTab === 'goals') c.innerHTML = goalsHTML();
   if (activeTab === 'settings') c.innerHTML = settingsHTML();
 
@@ -1510,25 +1510,65 @@ function savingsHTML() {
   const keys = Object.keys(months).sort();
   let cumulative = 0;
   keys.forEach(k => { const e = months[k].entries.find(e=>e.category==='Savings'); cumulative += e?Number(e.amount):0; });
-  const goalPct = config.emergencyFundGoal > 0 ? Math.min((cumulative/config.emergencyFundGoal)*100, 100) : 0;
+  const currentMonth = months[activeMonthKey];
+  const monthLabel = currentMonth.label || keyToLabel(activeMonthKey);
+  const currentSavingsEntry = currentMonth.entries.find(e => e.category === 'Savings');
+  const thisMonthSaved = currentSavingsEntry ? Number(currentSavingsEntry.amount) : 0;
+  const target = Number(config.monthlyTarget) || 0;
+  const targetPct = target > 0 ? Math.min((thisMonthSaved / target) * 100, 100) : 0;
+  const goal = Number(config.emergencyFundGoal) || 0;
+  const goalPct = goal > 0 ? Math.min((cumulative / goal) * 100, 100) : 0;
+  const goalRemaining = Math.max(goal - cumulative, 0);
 
   return `
   <div style="display:flex; justify-content:flex-end; margin-bottom:10px;">
     <button class="save-btn" onclick="manualSave()">💾 Save</button>${unsavedBadge()}
   </div>
-  <div class="grid grid-3">
-    <div class="card"><div class="label">Total Saved So Far</div><div class="value" style="color:var(--teal)" data-num="${cumulative}" data-prefix="${config.currency || 'AED'} ">${AED(cumulative)}</div></div>
-    <div class="card"><div class="label">Monthly Target</div><input type="number" value="${config.monthlyTarget}" onchange="updateConfig('monthlyTarget',this.value)"/></div>
-    <div class="card"><div class="label">Emergency Fund Goal</div><input type="number" value="${config.emergencyFundGoal}" onchange="updateConfig('emergencyFundGoal',this.value)"/></div>
+
+  <div class="card" style="text-align:center; padding:28px 20px;">
+    <div class="label">Total Saved (All Time)</div>
+    <div class="value" style="font-size:34px;" data-num="${cumulative}" data-prefix="${config.currency || 'AED'} ">${AED(cumulative)}</div>
   </div>
+
   <div class="card">
-    <div class="label">💰 Add to ${escapeAttr(months[activeMonthKey].label || keyToLabel(activeMonthKey))}'s Savings</div>
-    <div class="note" style="margin:6px 0 10px;">Quickly log money you've set aside, this updates the Savings row in your Monthly Log automatically.</div>
+    <div class="label">💰 Add to ${escapeAttr(monthLabel)}'s Savings</div>
+    <div class="note" style="margin:6px 0 10px;">Log money you've set aside this month, this updates your Monthly Log automatically.</div>
     <div style="display:flex; gap:8px;">
       <input type="number" id="savingsContribInput" placeholder="Add an amount" style="flex:1;"/>
       <button class="btn btn-primary" onclick="addSavingsContribution()">➕ Add</button>
     </div>
   </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+      <div class="label" style="margin-bottom:0;">📅 This Month vs Your Target</div>
+      <div class="note">${AED(thisMonthSaved)} of ${AED(target)}</div>
+    </div>
+    ${target > 0 ? `
+    <div class="progress-bar" style="height:12px;"><div class="progress-fill" data-target="${targetPct}" style="background:${thisMonthSaved >= target ? 'var(--teal)' : 'var(--gold)'}"></div></div>
+    <div class="note" style="margin-top:8px;">${thisMonthSaved >= target ? '🎉 You hit your monthly target for ' + escapeAttr(monthLabel) + '.' : `${AED(target - thisMonthSaved)} more to hit your target this month.`}</div>
+    ` : `<div class="note">Set a monthly target below to track this.</div>`}
+    <div style="margin-top:12px;">
+      <div class="label">Monthly Target</div>
+      <input type="number" value="${config.monthlyTarget}" onchange="updateConfig('monthlyTarget',this.value)"/>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+      <div class="label" style="margin-bottom:0;">🚩 Emergency Fund</div>
+      <div class="note">${AED(cumulative)} of ${AED(goal)}</div>
+    </div>
+    ${goal > 0 ? `
+    <div class="progress-bar" style="height:14px;"><div class="progress-fill" data-target="${goalPct}" style="background:${goalPct >= 100 ? 'var(--teal)' : 'var(--gold)'}"></div></div>
+    <div class="note" style="margin-top:8px;">${goalPct >= 100 ? '🎉 Fully funded!' : `${goalPct.toFixed(0)}% there, ${AED(goalRemaining)} to go.`}</div>
+    ` : `<div class="note">Set a goal below, e.g. 3 months of expenses, to start tracking progress.</div>`}
+    <div style="margin-top:12px;">
+      <div class="label">Emergency Fund Goal</div>
+      <input type="number" value="${config.emergencyFundGoal}" onchange="updateConfig('emergencyFundGoal',this.value)"/>
+    </div>
+  </div>
+
   <div class="card">
     <div class="label">Where Is This Kept?</div>
     <select onchange="updateConfigText('savingsLocation', this.value)" style="margin-top:6px;">
@@ -1536,13 +1576,10 @@ function savingsHTML() {
       ${LOCATION_OPTIONS.map(loc => `<option value="${loc}" ${config.savingsLocation===loc?'selected':''}>${loc}</option>`).join('')}
     </select>
   </div>
+
   <div class="card">
-    <div class="label">Emergency Fund Progress</div>
-    <div class="progress-bar" style="height:12px; margin-top:6px;"><div class="progress-fill" data-target="${goalPct}"></div></div>
-    <div class="label" style="margin-top:6px; font-family:'JetBrains Mono'; text-transform:none;">${AED(cumulative)} of ${AED(config.emergencyFundGoal)} (${goalPct.toFixed(0)}%)</div>
-  </div>
-  <div class="card">
-    <div class="label">Actual Savings vs Target</div>
+    <div class="label">Savings History</div>
+    <div class="note" style="margin:4px 0 6px;">What you've actually saved each month vs your target.</div>
     <div class="chart-wrap"><canvas id="savingsChart"></canvas></div>
   </div>`;
 }
@@ -1559,6 +1596,10 @@ function renderSavingsChart() {
 
   const ctx = document.getElementById('savingsChart');
   if (!ctx) return;
+  if (typeof Chart === 'undefined') {
+    ctx.parentElement.insertAdjacentHTML('beforeend', '<div class="note">Chart library didn\'t load, check your internet connection and reload.</div>');
+    return;
+  }
   if (chartInstance) chartInstance.destroy();
   chartInstance = new Chart(ctx, {
     data: {
