@@ -1272,14 +1272,14 @@ function liveUpdateLogTotals() {
   const paidEl = document.getElementById('logPaidTotal');
   const pendEl = document.getElementById('logPendingTotal');
   if (!remEl) return;
-  let total = 0, paidTotal = 0, pendingTotal = 0;
+  let total = 0, paidTotal = 0;
   document.querySelectorAll('#content .log-row').forEach(row => {
     const amt = Number(row.querySelector('.log-amt').value) || 0;
     const status = row.querySelector('.log-status').value;
     total += amt;
     if (status === 'Paid') paidTotal += amt;
-    else if (status === 'Pending') pendingTotal += amt;
   });
+  const pendingTotal = total - paidTotal;
   const month = months[activeMonthKey];
   const income = Number(month.income) || 0;
   const remaining = income - total;
@@ -1901,6 +1901,9 @@ function escapeAttr(str) { return String(str??'').replace(/&/g,'&amp;').replace(
 function escapeHtml(str) { return String(str??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 // ---------------- init ----------------
+document.addEventListener('focusin', (e) => {
+  if (e.target.tagName === 'INPUT' && e.target.type === 'number') e.target.select();
+});
 initTheme();
 updateLiveClock();
 initAuth();
